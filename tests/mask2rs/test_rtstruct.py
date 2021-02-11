@@ -1,9 +1,9 @@
 import os
 from unittest import TestCase
 
-from rs2mask.rtstruct import RTStruct
+from mask2rs.rtstruct import RTStruct
 
-TEST_IPP = 'rs2mask/data/314159'
+TEST_IPP = 'tests/data/cheese_png'
 
 
 class TestRTStruct(TestCase):
@@ -12,7 +12,7 @@ class TestRTStruct(TestCase):
         self.rtstruct = RTStruct(TEST_IPP)
         self.structure = {"ObservationNumber": "0",
                           "ReferencedROINumber": "0",
-                          "ROIObservationLabel": "heart",
+                          "ROIObservationLabel": "max",
                           "RTROIInterpretedType": "ORGAN",
                           "ROIInterpreter": "",
                           "ROIGenerationAlgorithm": "AUTOMATIC"
@@ -36,7 +36,7 @@ class TestRTStruct(TestCase):
 
         self.assertEqual(str(self.rtstruct.ds_rs.RTROIObservationsSequence[0].ObservationNumber), "0")
         self.assertEqual(str(self.rtstruct.ds_rs.RTROIObservationsSequence[0].ReferencedROINumber), "0")
-        self.assertEqual(str(self.rtstruct.ds_rs.RTROIObservationsSequence[0].ROIObservationLabel), "heart")
+        self.assertEqual(str(self.rtstruct.ds_rs.RTROIObservationsSequence[0].ROIObservationLabel), "max")
         self.assertEqual(str(self.rtstruct.ds_rs.RTROIObservationsSequence[0].RTROIInterpretedType), "ORGAN")
         self.assertEqual(str(self.rtstruct.ds_rs.RTROIObservationsSequence[0].ROIInterpreter), "")
 
@@ -47,12 +47,12 @@ class TestRTStruct(TestCase):
         self.assertEqual(str(self.rtstruct.ds_rs.StructureSetROISequence[0].ROINumber), "0")
         self.assertEqual(str(self.rtstruct.ds_rs.StructureSetROISequence[0].ReferencedFrameOfReferenceUID),
                          self.rtstruct.ds_rs.FrameOfReferenceUID)
-        self.assertEqual(str(self.rtstruct.ds_rs.StructureSetROISequence[0].ROIName), "heart")
+        self.assertEqual(str(self.rtstruct.ds_rs.StructureSetROISequence[0].ROIName), "max")
         self.assertEqual(str(self.rtstruct.ds_rs.StructureSetROISequence[0].ROIGenerationAlgorithm), "AUTOMATIC")
 
     def test_add_roi_contour_sequence(self):
         self.rtstruct.init_sequence()
-        coordinates = self.rtstruct.mask.coordinates("heart")
+        coordinates = self.rtstruct.mask.coordinates("max")
         self.rtstruct.add_roi_contour_sequence(self.structure, 0, coordinates)
 
         self.assertEqual(str(self.rtstruct.ds_rs.ROIContourSequence[0].ReferencedROINumber), "0")

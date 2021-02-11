@@ -20,8 +20,9 @@ class Mask:
                                       if file.endswith("png")], reverse=True)
 
         self.ct_path = os.path.join(path, "ct")
-        self.ct_files = natsorted([os.path.join(self.ct_path, ct) for ct in os.listdir(self.ct_path)])
-        self.ds_ct = ds_ct or [dcmread(ct_file) for ct_file in self.ct_files]
+        self.ct_files = natsorted([os.path.join(self.ct_path, ct) for ct in os.listdir(self.ct_path)
+                                  if ct.endswith("dcm")])
+        self.ds_ct = ds_ct or [dcmread(ct_file, force=True) for ct_file in self.ct_files]
 
         self.n_slices = len(self.masks_files)
 

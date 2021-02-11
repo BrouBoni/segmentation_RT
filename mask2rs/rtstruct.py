@@ -8,7 +8,7 @@ from pydicom.dataset import Dataset, FileMetaDataset
 from pydicom.sequence import Sequence
 from pydicom.uid import generate_uid, UID
 
-from rs2mask.mask import Mask
+from mask2rs.mask import Mask
 
 COMMON_TAGS = {'PatientSex', 'SeriesInstanceUID', 'SeriesNumber', 'SeriesDate', 'AccessionNumber',
                'PatientID', 'SpecificCharacterSet', 'SeriesDescription', 'StudyDate', 'StudyDescription',

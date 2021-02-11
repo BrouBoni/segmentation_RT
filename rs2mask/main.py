@@ -1,10 +1,8 @@
-import os
-
-from rs2mask.rtstruct import RTStruct
+from options.rs2mask_option import Rs2MaskOptions
+from rs2mask.dcm2mask import Dataset
 
 if __name__ == '__main__':
-    data = os.path.join('rs2mask', 'data', '314159')
-    struct = RTStruct(data)
-    struct.create()
-    struct.save()
-    print(struct.ds_rs)
+    opt = Rs2MaskOptions().parse()
+    dataset = Dataset(opt)
+    dataset.make_png()
+    dataset.sort_dataset(ratio=0.8, structure='external')
