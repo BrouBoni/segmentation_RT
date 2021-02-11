@@ -6,6 +6,8 @@ from natsort import natsorted
 from pydicom import dcmread
 from pydicom.tag import Tag
 from skimage.measure import find_contours, approximate_polygon
+from PIL import Image
+from skimage import morphology
 
 
 class Mask:
@@ -74,19 +76,26 @@ class Mask:
         referenced_contour_data = []
         self.ct_files.reverse()
         for index, png in enumerate(self.masks_files):
-            img = plt.imread(os.path.join(self.masks_path, mask_name, png))
-            # ToDo validate 0
-            contour = find_contours(img, 0)
-            if len(contour):
-                coords = approximate_polygon(contour[0], tolerance=0.05)
-                image_position_patient = self.get_dicom_value('ImagePositionPatient', index)
-                mask_coordinates = []
-                for coord in coords:
-                    r, c = coord
-                    x, y, z = self.coord_calculation(c, r, image_position_patient)
-                    mask_coordinates.append(round(x, 4))
-                    mask_coordinates.append(round(y, 4))
-                    mask_coordinates.append(round(z, 4))
-                referenced_contour_data.append((self.ds_ct[index].SOPInstanceUID, mask_coordinates))
+
+            img_obj = Image.open(os.path.join(self.masks_path, mask_name, png)).convert('I')
+            img_1D = np.array(list(img_obj.getdata()),bool)
+            img_3D = np.reshape(img_1D, (img_obj.height, img_obj.width))
+            # removing holes using a large value to be sure all the holes are removed
+            img = morphology.remove_small_holes(img_3D, 100000, in_place=True)
+
+            contours = find_contours(img)
+            for contour in contours:
+
+                if len(contour):
+
+                    image_position_patient = self.get_dicom_value('ImagePositionPatient', index)
+                    mask_coordinates = []
+                    for coord in contour:
+                        r, c = coord
+                        x, y, z = self.coord_calculation(c, r, image_position_patient)
+                        mask_coordinates.append(round(x, 4))
+                        mask_coordinates.append(round(y, 4))
+                        mask_coordinates.append(round(z, 4))
+                    referenced_contour_data.append((self.ds_ct[index].SOPInstanceUID, mask_coordinates))
 
         return referenced_contour_data
