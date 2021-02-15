@@ -4,7 +4,6 @@ from unittest import TestCase
 
 import nibabel as nib
 
-from options.rs2mask_option import Rs2MaskOptions
 from rs2mask.dcm2mask import Dataset
 
 TEST_IPP = 'tests/data/cheese_dcm'
@@ -15,11 +14,10 @@ TEST_NII = 'tests/data/ct.nii'
 class TestDataset(TestCase):
 
     def setUp(self):
-        opt = Rs2MaskOptions().parse()
-        opt.structures = ['External', 'max', 'missing']
-        opt.root = TEST_IPP
-        opt.name = "dataset_cheese"
-        self.dataset = Dataset(opt)
+        structures = ['External', 'max', 'missing']
+        root = TEST_IPP
+        name = "dataset_cheese"
+        self.dataset = Dataset(root, name, structures, '.')
 
     def tearDown(self):
         shutil.rmtree(self.dataset.path_dataset, ignore_errors=True)
@@ -40,7 +38,9 @@ class TestDataset(TestCase):
         self.assertEqual(len(image_files), nii_object.shape[2])
 
     def test_make_png(self):
+        # ToDo
         self.fail()
 
     def test_sort_dataset(self):
+        # ToDo
         self.fail()
