@@ -1,18 +1,27 @@
 import os
 
-import matplotlib.pyplot as plt
 import numpy as np
+import pydicom
+from PIL import Image
 from natsort import natsorted
 from pydicom import dcmread
 from pydicom.tag import Tag
-from skimage.measure import find_contours, approximate_polygon
-from PIL import Image
 from skimage import morphology
+from skimage.measure import find_contours
 
 
 class Mask:
+    """
+    Class that hold any mask aligned with a reference CT
 
-    def __init__(self, path, ds_ct=None):
+    :param string path:
+        Root directory which includes a mask folder.
+
+    :param List[pydicom.dataset.FileDataset] ds_cts:
+        CT Dataset.
+    """
+
+    def __init__(self, path, ds_cts=None):
         self.path = path
         self.masks_path = os.path.join(path, "masks")
         self.masks = os.listdir(self.masks_path)
@@ -24,29 +33,49 @@ class Mask:
         self.ct_path = os.path.join(path, "ct")
         self.ct_files = natsorted([os.path.join(self.ct_path, ct) for ct in os.listdir(self.ct_path)
                                   if ct.endswith("dcm")])
-        self.ds_ct = ds_ct or [dcmread(ct_file, force=True) for ct_file in self.ct_files]
+        self.ds_ct = ds_cts or [dcmread(ct_file, force=True) for ct_file in self.ct_files]
 
         self.n_slices = len(self.masks_files)
 
-        self.image_orientation_patient = self.get_dicom_value('ImageOrientationPatient', 0)
-        self.pixel_spacing = self.get_dicom_value('PixelSpacing', 0)
+        self.image_orientation_patient = list(self.get_dicom_value('ImageOrientationPatient', 0))
+        self.pixel_spacing = list(self.get_dicom_value('PixelSpacing', 0))
 
     def __str__(self):
         message = f"Structure(s): {', '.join(self.masks)}"
         return message
 
     def get_dicom_value(self, tag, n_slice=0):
+        """ Return a dicom tag value.
+
+        :param tag: Dicom tag in keyword format
+        :type tag: string
+        :param n_slice: Slice number
+        :type n_slice: int
+        :return: the actual value. A regular value like a number or string (or list of them), or a Sequence.
+        :rtype: :class:`pydicom.dataelem.DataElement`
+        """
         return self.ds_ct[n_slice][Tag(tag)].value
 
-    def coord_calculation(self, c, r, image_position_patient):
+    def coordinate_mapping(self, c, r, image_position_patient):
+        """The mapping of pixel location (c,r) to Reference Coordinate System (RCS).
+
+        :param c: column
+        :type c: int
+        :param r: row
+        :type r: int
+        :param image_position_patient:The x, y, and z coordinates of the upper left hand corner of the image, in mm.
+        :type image_position_patient: :class:`pydicom.dataelem.DataElement`
+        :return: The coordinates of the voxel (c,r) in the frame's image plane in units of mm.
+        :rtype: list[int]
+        """
         sx, sy, sz = np.array(image_position_patient, dtype=np.float32)
-        delta_r, delta_c = np.array(self.pixel_spacing[:], dtype=np.float32)
+        delta_r, delta_c = np.array(list(self.pixel_spacing), dtype=np.float32)
 
         xx, xy, xz = np.array(self.image_orientation_patient[:3], dtype=np.float32)
         yx, yy, yz = np.array(self.image_orientation_patient[3:], dtype=np.float32)
 
-        t_1 = np.array(self.get_dicom_value('ImagePositionPatient', 0)[:])
-        t_n = np.array(self.get_dicom_value('ImagePositionPatient', self.n_slices - 1)[:])
+        t_1 = np.array(list(self.get_dicom_value('ImagePositionPatient', 0))[:])
+        t_n = np.array(list(self.get_dicom_value('ImagePositionPatient', self.n_slices - 1))[:])
 
         f = np.array([[yx, xx],
                       [yy, xy],
@@ -73,26 +102,32 @@ class Mask:
         return px, py, pz
 
     def coordinates(self, mask_name):
+        """Give the coordinates of the corresponding mask in theRCS and the SOP Instance UID`
+         associated for each slice.
+
+        :param mask_name: name of the mask.
+        :type mask_name: str
+        :return: List of ROI contour sequence.
+        :rtype: list[(str,list[int])]
+        """
         referenced_contour_data = []
         self.ct_files.reverse()
         for index, png in enumerate(self.masks_files):
 
             img_obj = Image.open(os.path.join(self.masks_path, mask_name, png)).convert('I')
-            img_1D = np.array(list(img_obj.getdata()),bool)
-            img_3D = np.reshape(img_1D, (img_obj.height, img_obj.width))
+            img_1d = np.array(list(img_obj.getdata()), bool)
+            img_3d = np.reshape(img_1d, (img_obj.height, img_obj.width))
             # removing holes using a large value to be sure all the holes are removed
-            img = morphology.remove_small_holes(img_3D, 100000, in_place=True)
+            img = morphology.remove_small_holes(img_3d, 100000, in_place=True)
 
             contours = find_contours(img)
             for contour in contours:
-
                 if len(contour):
-
                     image_position_patient = self.get_dicom_value('ImagePositionPatient', index)
                     mask_coordinates = []
                     for coord in contour:
                         r, c = coord
-                        x, y, z = self.coord_calculation(c, r, image_position_patient)
+                        x, y, z = self.coordinate_mapping(c, r, image_position_patient)
                         mask_coordinates.append(round(x, 4))
                         mask_coordinates.append(round(y, 4))
                         mask_coordinates.append(round(z, 4))

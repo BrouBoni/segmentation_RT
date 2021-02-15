@@ -25,12 +25,12 @@ class RTStruct:
         self.ct_files = natsorted([os.path.join(self.ct_path, ct) for ct in os.listdir(self.ct_path)
                                    if ct.endswith("dcm")])
 
-        self.ds_ct = [dcmread(ct_file) for ct_file in self.ct_files]
-        self.ds_ct_sop_instance_uid = [ds_ct.SOPInstanceUID for ds_ct in self.ds_ct]
+        self.ds_cts = [dcmread(ct_file) for ct_file in self.ct_files]
+        self.ds_ct_sop_instance_uid = [ds_ct.SOPInstanceUID for ds_ct in self.ds_cts]
 
-        self.ds_ct_reference = self.ds_ct[0]
+        self.ds_ct_reference = self.ds_cts[0]
 
-        self.mask = Mask(self.path, self.ds_ct)
+        self.mask = Mask(self.path, self.ds_cts)
         self.ds_rs = Dataset()
 
         # RS meta
