@@ -12,7 +12,7 @@ from skimage.measure import find_contours
 
 class Mask:
     """
-    Class that hold any mask aligned with a reference CT
+    Class that hold any mask aligned with a reference CT.
 
     :param string path:
         Root directory which includes a mask folder.
@@ -47,9 +47,9 @@ class Mask:
     def get_dicom_value(self, tag, n_slice=0):
         """ Return a dicom tag value.
 
-        :param tag: Dicom tag in keyword format
+        :param tag: Dicom tag in keyword format.
         :type tag: string
-        :param n_slice: Slice number
+        :param n_slice: Slice number.
         :type n_slice: int
         :return: the actual value. A regular value like a number or string (or list of them), or a Sequence.
         :rtype: :class:`pydicom.dataelem.DataElement`
@@ -59,9 +59,9 @@ class Mask:
     def coordinate_mapping(self, c, r, image_position_patient):
         """The mapping of pixel location (c,r) to Reference Coordinate System (RCS).
 
-        :param c: column
+        :param c: column.
         :type c: int
-        :param r: row
+        :param r: row.
         :type r: int
         :param image_position_patient:The x, y, and z coordinates of the upper left hand corner of the image, in mm.
         :type image_position_patient: :class:`pydicom.dataelem.DataElement`
