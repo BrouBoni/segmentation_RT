@@ -63,7 +63,8 @@ class Mask:
         :type c: int
         :param r: row.
         :type r: int
-        :param image_position_patient:The x, y, and z coordinates of the upper left hand corner of the image, in mm.
+        :param image_position_patient: The x, y, and z coordinates of the
+            upper left hand corner of the image, in mm.
         :type image_position_patient: :class:`pydicom.dataelem.DataElement`
         :return: The coordinates of the voxel (c,r) in the frame's image plane in units of mm.
         :rtype: list[int]
@@ -102,8 +103,7 @@ class Mask:
         return px, py, pz
 
     def coordinates(self, mask_name):
-        """Give the coordinates of the corresponding mask in theRCS and the SOP Instance UID`
-         associated for each slice.
+        """Give the coordinates of the corresponding mask in the RCS and the SOP Instance UID.
 
         :param mask_name: name of the mask.
         :type mask_name: str

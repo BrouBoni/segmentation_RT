@@ -128,7 +128,7 @@ class Dataset:
         :param structure: selected structure.
         :type structure: str
         :param ratio: ration train/test set.
-        :type ratio:float
+        :type ratio: float
         """
         path_dataset = self.path_dataset
         path_out = self.export_path

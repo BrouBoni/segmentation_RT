@@ -117,7 +117,7 @@ class RTStruct:
         """Add a sequence to the RT ROI Observations Module.
 
         :param structure: dict containing structure information.
-        :type structure:dict[str, str]
+        :type structure: dict[str, str]
         :param index: index of the structure.
         :type index: int
         """
@@ -132,7 +132,7 @@ class RTStruct:
         """Add a sequence to the Structure Set Module.
 
         :param structure: dict containing structure information.
-        :type structure:dict[str, str]
+        :type structure: dict[str, str]
         :param index: index of the structure.
         :type index: int
         """
@@ -146,11 +146,11 @@ class RTStruct:
         """Add a sequence to the ROI Contour Module.
 
         :param structure: dict containing structure information.
-        :type structure:dict[str, str]
+        :type structure: dict[str, str]
         :param index: index of the structure.
         :type index: int
         :param coordinates: coordinates of the corresponding mask in theRCS and the SOP Instance UID`
-         associated for each slice.
+            associated for each slice.
         :type coordinates: list[(str,list[int])]
         """
         roi_contour_sequence = self.ds_rs.ROIContourSequence[index]
@@ -177,11 +177,11 @@ class RTStruct:
         """Add a structure set to the dataset.
 
         :param structure: dict containing structure information.
-        :type structure:dict[str, str]
+        :type structure: dict[str, str]
         :param index: index of the structure.
         :type index: int
         :param coordinates: coordinates of the corresponding mask in theRCS and the SOP Instance UID`
-         associated for each slice.
+            associated for each slice.
         :type coordinates: list[(str,list[int])]
         """
         self.init_sequence()
