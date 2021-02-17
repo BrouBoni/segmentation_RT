@@ -23,11 +23,11 @@ class TrainOptions(object):
         self.parser.add_argument('--name', type=str, required=True,
                                  help='name of the experiment. It decides where to store samples and models')
         self.parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints/', help='models are saved here')
-        self.parser.add_argument('--mask', type=str, required=True, help='path to data')
+        self.parser.add_argument('--mask_name', type=str, required=True, help='path to data')
         # data
-        self.parser.add_argument('--loadSize', type=int, default=512, help='image size')
+        self.parser.add_argument('--load_size', type=int, default=512, help='image size')
         self.parser.add_argument('--crop', action='store_true', help='crop image')
-        self.parser.add_argument('--cropSize', type=int, default=256, help='then crop to this size')
+        self.parser.add_argument('--crop_size', type=int, default=256, help='then crop to this size')
         self.parser.add_argument('--input_nc', type=int, default=1, help='# of input image channels')
         self.parser.add_argument('--output_nc', type=int, default=1, help='# of output image channels')
         self.parser.add_argument('--nThreads', default=1, type=int, help='# threads for loading data')

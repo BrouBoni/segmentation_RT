@@ -77,7 +77,7 @@ def test_model():
         if use_gpu:
             ct = ct.cuda()
 
-        visuals = model.synthetize(ct)
+        visuals = model.synthesize(ct)
         labels = [label for label in visuals.keys()]
         # for label in labels:
         #     os.mkdir(os.path.join(opt.res_dir, label))

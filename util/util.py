@@ -4,6 +4,21 @@ import numpy as np
 import png
 
 
+def print_log(out_f, message):
+    out_f.write(message + "\n")
+    out_f.flush()
+    print(message)
+
+
+def format_log(epoch, i, errors, t, prefix=True):
+    message = '(epoch: %d, iteration: %d, time: %.3f) ' % (epoch, i, t)
+    if not prefix:
+        message = ' ' * len(message)
+    for k, v in errors.items():
+        message += '%s: %.3f ' % (k, v)
+    return message
+
+
 def listdir_full_path(path):
     return [os.path.join(path, f) for f in os.listdir(path)]
 

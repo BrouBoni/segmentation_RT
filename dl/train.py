@@ -11,23 +11,9 @@ import torchvision.utils as vutils
 from torch.autograd import Variable
 
 from dataloader.data_loader import DataLoader
-from model.model import JulienGNet
+from model.model import Model
 from options.dl_option import TrainOptions
-
-
-def print_log(out_f, message):
-    out_f.write(message + "\n")
-    out_f.flush()
-    print(message)
-
-
-def format_log(epoch, i, errors, t, prefix=True):
-    message = '(epoch: %d, iters: %d, time: %.3f) ' % (epoch, i, t)
-    if not prefix:
-        message = ' ' * len(message)
-    for k, v in errors.items():
-        message += '%s: %.3f ' % (k, v)
-    return message
+from util.util import print_log, format_log
 
 
 def train_model():
@@ -43,7 +29,8 @@ def train_model():
         if use_gpu:
             torch.cuda.manual_seed_all(opt.seed)
 
-    train_data_loader = DataLoader(opt, subset='train', batch_size=opt.batchSize)
+    train_data_loader = DataLoader(opt.dataroot, opt.mask_name, subset='train', crop_size=256)
+    # train_data_loader = DataLoader(opt, subset='train', batch_size=opt.batchSize)
     # test_data_loader = DataLoader(opt, subset='test', batch_size=1, drop_last=True)
 
     train_dataset = train_data_loader.load_data()
@@ -53,7 +40,7 @@ def train_model():
     # test_dataset = test_data_loader.load_data()
     # print_log(out_f, '#test images = %d' % len(test_data_loader))
 
-    model = JulienGNet(opt)
+    model = Model(opt.expr_dir)
 
     total_steps = 0
     print_start_time = time.time()
@@ -64,7 +51,7 @@ def train_model():
 
         for i, data in enumerate(train_dataset):
             ct = Variable(data['ct'])
-            mask = Variable(data['mask'])
+            mask = Variable(data['mask_name'])
 
             total_steps += opt.batchSize
             epoch_iter += opt.batchSize

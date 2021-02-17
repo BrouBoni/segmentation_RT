@@ -9,16 +9,42 @@ import torchvision.transforms as transforms
 from PIL import Image
 
 
-class Ct2Struct(object):
+class AlignedDataset(data.Dataset):
+    """A dataset class for paired image dataset. Class that overrides :class:`data.Dataset`.
 
-    def __init__(self, opt, subset):
+    It assumes that the directory '/root/train' contains image pairs in the form of {ct,mask_name}.
+    During test time, you need to prepare a directory '/root/test'.
 
-        self.root = opt.dataroot
-        self.mask = opt.mask
+    :param string root:
+        Root directory.
+
+    :param string mask_name:
+        Name of the mask.
+
+    :param int load_size:
+        Load images at this size.
+
+    :param int crop_size:
+        Crop images at this size.
+
+    :param bool flip:
+        Flip images or not.
+
+    :param int crop_size:
+        Crop images at this size.
+
+    :param str subset:
+        train or test.
+    """
+
+    def __init__(self, root, mask_name, load_size, crop_size, flip, subset):
+
+        self.root = root
+        self.mask = mask_name
         self.subset = subset
-        self.opt = opt
-        self.cropSize = opt.cropSize
-        self.loadSize = (opt.loadSize, opt.loadSize)
+        self.crop_size = crop_size
+        self.load_size = load_size
+        self.flip = flip
 
         if subset == 'train':
             self.dir_image = os.path.join(self.root, 'train')
@@ -39,9 +65,9 @@ class Ct2Struct(object):
         # shuffle data
         rand_state = random.getstate()
         random.seed(123)
-        #ToDo change
         index = range(len(self.ct_paths))
         random.shuffle(list(index))
+
         self.ct_paths = [self.ct_paths[i] for i in index]
         self.mask_paths = [self.mask_paths[i] for i in index]
 
@@ -56,88 +82,165 @@ class Ct2Struct(object):
         ct_img = Image.open(ct_path).convert('I')
         mask_img = Image.open(mask_path).convert('I')
 
-        params = get_params(self.cropSize, self.loadSize)
-        transform = get_transform(self.opt, params)
+        parameters = get_transform_parameters(self.load_size, self.crop_size, self.flip)
+        transform = get_transform(parameters)
 
         ct_img = transform(ct_img)
-        ct_img = torch.from_numpy(np.array(ct_img, np.int32, copy=False)).type(torch.float32)
-        ct_img = ct_img.clamp(0, 2500) / 1250. - 1.
+        ct_torch = torch.from_numpy(np.array(ct_img, dtype=np.float32))
+        ct_torch = ct_torch.clamp(0, 2500) / 1250. - 1.
 
-        mask_img = transform(mask_img).type(torch.float32)
+        mask_img = transform(mask_img)
+        mask_torch = torch.from_numpy(np.array(mask_img, dtype=np.float32))
 
-        data = OrderedDict([('patientID', self.ct_paths[index]),
-                            ('ct',  torch.as_tensor(ct_img)),
-                            ('mask', mask_img)
-                            ])
+        dataset = OrderedDict([('patientID', self.ct_paths[index]),
+                               ('ct', ct_torch.type(torch.float32).unsqueeze_(0)),
+                               ('mask_name', mask_torch.unsqueeze_(0))
+                               ])
 
-        return data
+        return dataset
 
     def __len__(self):
         return self.size
 
-
 class DataLoader(object):
-    def __init__(self, opt, subset, batch_size,
+    """Dataset.
+
+        :param string root:
+            Root directory.
+
+        :param string mask_name:
+            Name of the mask.
+
+        :param str subset:
+            train or test.
+
+        :param int batch_size:
+            how many samples per batch to load (default: 1).
+
+        :param int load_size:
+            Load images at this size(default: 512).
+
+        :param int crop_size:
+            Crop images at this size(default: 256).
+
+        :param bool flip:
+            Flip images or not (default: False).
+
+        :param bool shuffle:
+            set to True to have the data reshuffled at every epoch (default: False).
+
+        :param bool drop_last:
+            set to True to drop the last incomplete batch, if the dataset size is not divisible by the batch size.
+            If False and the size of dataset is not divisible by the batch size, then the last batch will be smaller.
+            (default: False)
+
+
+        """
+    def __init__(self, root, mask_name, subset, batch_size=1, load_size=512, crop_size=512, flip=False,
                  shuffle=False, drop_last=False):
-        self.opt = opt
-        self.dataset = Ct2Struct(opt, subset)
+
+        self.dataset = AlignedDataset(root, mask_name, load_size, crop_size, flip, subset)
         self.dataloader = torch.utils.data.DataLoader(
-            self.dataset,
+            dataset=self.dataset,
             batch_size=batch_size,
             shuffle=shuffle,
-            num_workers=int(1),
+            num_workers=1,
             drop_last=drop_last)
-
-    def load_data(self):
-        return self.dataloader
 
     def __len__(self):
         return len(self.dataset)
 
-
-def get_params(cropSize, loadSize):
-    new_h, new_w = loadSize
-
-    x = random.randint(0, np.maximum(0, new_w - cropSize))
-    y = random.randint(0, np.maximum(0, new_h - cropSize))
-
-    flip = random.random() > 0.5
-    flip = False
-    return {'crop_pos': (x, y), 'flip': flip}
+    def load_data(self):
+        return self.dataloader
 
 
-def get_transform(opt, params):
-    transform_list = [transforms.Resize([opt.loadSize, opt.loadSize], Image.NEAREST)]
+def get_transform_parameters(crop_size, load_size, flip):
+    """Transformation parameters for data augmentation.
 
-    if opt.crop:
-        transform_list.append(transforms.Lambda(lambda img: __crop(img, params['crop_pos'], opt.cropSize)))
-        transform_list.append(transforms.Lambda(lambda img: __flip(img, params['flip'])))
+    :param crop_size: Crop size.
+    :type crop_size: int
+    :param load_size: Image rescaling.
+    :type load_size: int
+    :param flip: Flip or not
+    :type flip: bool
+    :return: Crop position and flip.
+    :rtype: dict[int, int, (int, int), bool]
+    """
+    new_h = new_w = load_size
 
-    transform_list += [transforms.ToTensor()]
+    x = random.randint(0, np.maximum(0, new_w - crop_size))
+    y = random.randint(0, np.maximum(0, new_h - crop_size))
+
+    if flip:
+        flip = random.random() > 0.5
+    else:
+        flip = False
+
+    return {'load_size': load_size, 'crop_size': crop_size, 'crop_position': (x, y), 'flip': flip}
+
+
+# noinspection PyTypeChecker
+def get_transform(parameters):
+    transform_list = [transforms.Resize([parameters['load_size'], parameters['load_size']], Image.NEAREST)]
+
+    if parameters['load_size'] != parameters['crop_size']:
+        transform_list.append(transforms.Lambda(lambda img:
+                                                __crop(img, parameters['crop_position'], parameters['crop_size'])))
+        transform_list.append(transforms.Lambda(lambda img:
+                                                __flip(img, parameters['flip'])))
+
     return transforms.Compose(transform_list)
 
 
-def __crop(img, pos, size):
-    ow, oh = img.size
-    x1, y1 = pos
-    tw = th = size
-    if (ow > tw or oh > th):
-        return img.crop((x1, y1, x1 + tw, y1 + th))
-    return img
+def make_dataset(directory):
+    """List all images in a directory.
 
-
-def __flip(img, flip):
-    if flip:
-        return img.transpose(Image.FLIP_LEFT_RIGHT)
-    return img
-
-def make_dataset(dir):
+    :param directory: path to directory.
+    :type directory: str
+    :return: List of file in directory.
+    :rtype: list[str]
+    """
     images = []
-    assert os.path.isdir(dir), '%s is not a valid directory' % dir
+    assert os.path.isdir(directory), '%s is not a valid directory' % directory
 
-    for root, _, fnames in sorted(os.walk(dir)):
+    for root, _, fnames in sorted(os.walk(directory)):
         for fname in fnames:
             path = os.path.join(root, fname)
             images.append(path)
 
     return images
+
+
+def __crop(image, position, size):
+    """Return a cropped image.
+
+    :param image: an image.
+    :type image: :class:`Image`
+    :param position: origin (x, y).
+    :type position: (int, int)
+    :param size: desired size.
+    :type size: int
+    :return: Image cropped.
+    :rtype: :class:`Image`
+    """
+    ow, oh = image.size
+    x1, y1 = position
+    tw = th = size
+    if ow > tw or oh > th:
+        return image.crop((x1, y1, x1 + tw, y1 + th))
+    return image
+
+
+def __flip(image, flip):
+    """Return a flipped or not image.
+
+    :param image: an image.
+    :type image: :class:`Image`
+    :param flip: flip or not.
+    :type flip: bool
+    :return: image flipped or not.
+    :rtype: :class:`Image`
+    """
+    if flip:
+        return image.transpose(Image.FLIP_LEFT_RIGHT)
+    return image
