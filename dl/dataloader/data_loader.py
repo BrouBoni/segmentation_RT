@@ -46,10 +46,10 @@ class AlignedDataset(data.Dataset):
         self.load_size = load_size
         self.flip = flip
 
-        if subset == 'train':
+        if subset == 'training':
             self.dir_image = os.path.join(self.root, 'train')
 
-        elif subset == 'test':
+        elif subset == 'testing':
             self.dir_image = os.path.join(self.root, 'test')
 
         else:
@@ -67,7 +67,6 @@ class AlignedDataset(data.Dataset):
         random.seed(123)
         index = range(len(self.ct_paths))
         random.shuffle(list(index))
-
         self.ct_paths = [self.ct_paths[i] for i in index]
         self.mask_paths = [self.mask_paths[i] for i in index]
 
@@ -102,6 +101,7 @@ class AlignedDataset(data.Dataset):
     def __len__(self):
         return self.size
 
+
 class DataLoader(object):
     """Dataset.
 
@@ -134,12 +134,13 @@ class DataLoader(object):
             If False and the size of dataset is not divisible by the batch size, then the last batch will be smaller.
             (default: False)
 
-
         """
+
     def __init__(self, root, mask_name, subset, batch_size=1, load_size=512, crop_size=512, flip=False,
                  shuffle=False, drop_last=False):
 
         self.dataset = AlignedDataset(root, mask_name, load_size, crop_size, flip, subset)
+        self.subset = subset
         self.dataloader = torch.utils.data.DataLoader(
             dataset=self.dataset,
             batch_size=batch_size,
@@ -151,11 +152,12 @@ class DataLoader(object):
         return len(self.dataset)
 
     def load_data(self):
+        print(f"#{self.subset} images = {self.__len__()}")
         return self.dataloader
 
 
 def get_transform_parameters(crop_size, load_size, flip):
-    """Transformation parameters for data augmentation.
+    """Parameters for data augmentation.
 
     :param crop_size: Crop size.
     :type crop_size: int

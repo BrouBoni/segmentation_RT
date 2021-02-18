@@ -2,11 +2,12 @@ import functools
 
 import torch
 import torch.nn as nn
+
 from dl.model.modules import ResnetGenerator
 
 
 def weights_init(m):
-    """Initialize networks weights.
+    """Initialize network weights.
 
     :param m: Module
     :type m: :class:`torch.nn.Module`
@@ -23,7 +24,7 @@ def weights_init(m):
 
 def define_generator(input_nc, output_nc, ngf, n_blocks,
                      use_dropout=False, gpu_ids=None):
-    """Create a generator
+    """Create a generator.
 
     :param input_nc: the number of channels in input images.
     :type input_nc: int

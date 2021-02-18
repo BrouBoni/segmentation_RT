@@ -5,6 +5,13 @@ import png
 
 
 def print_log(out_f, message):
+    """Writes in log file.
+
+    :param out_f:
+    :type out_f:
+    :param message:
+    :type message:
+    """
     out_f.write(message + "\n")
     out_f.flush()
     print(message)

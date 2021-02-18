@@ -119,7 +119,7 @@ class ResnetBlock(nn.Module):
     A resnet block is a conv block with skip connections
     We construct a conv block with build_conv_block function,
     and implement skip connections in <forward> function.
-    Original Resnet paper: https://arxiv.org/pdf/1512.03385.pdf
+    Original Resnet paper: https://arxiv.org/pdf/1512.03385.pdf.
 
      :param int dim:
         the number of channels in the conv layer.

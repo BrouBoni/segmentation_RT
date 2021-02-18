@@ -36,7 +36,7 @@ class TrainOptions(object):
         self.parser.add_argument('--seed', type=int, help='manual seed')
         self.parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
 
-        self.parser.add_argument('--batchSize', type=int, default=1, help='input batch size')
+        self.parser.add_argument('--batch_size', type=int, default=1, help='input batch size')
         self.parser.add_argument('--continue_train', action='store_true',
                                  help='continue training: load the latest model')
         self.parser.add_argument('--load_pretrain', type=str, default='',
@@ -129,7 +129,7 @@ class TrainOptions(object):
 class TestOptions(object):
     def __init__(self):
         self.parser = argparse.ArgumentParser()
-        self.parser.add_argument('--chk_path', required=True, type=str,
+        self.parser.add_argument('--checkpoint_path', required=True, type=str,
                                  help='path to checkpoint -- we assume expr_dir is containing dir')
         self.parser.add_argument('--res_dir', type=str, default='test_res',
                                  help='results directory (will create under expr_dir)')
