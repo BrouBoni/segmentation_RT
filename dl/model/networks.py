@@ -44,8 +44,6 @@ def define_generator(input_nc, output_nc, ngf, n_blocks,
 
     if gpu_ids is None:
         gpu_ids = []
-    if len(gpu_ids) > 0:
-        assert (torch.cuda.is_available())
 
     norm_layer = functools.partial(nn.BatchNorm2d, affine=True)
 
@@ -53,6 +51,7 @@ def define_generator(input_nc, output_nc, ngf, n_blocks,
                             use_dropout=use_dropout, gpu_ids=gpu_ids)
 
     if len(gpu_ids) > 0:
+        assert (torch.cuda.is_available())
         net_g.cuda()
     net_g.apply(weights_init)
     return net_g

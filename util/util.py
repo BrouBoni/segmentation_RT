@@ -26,6 +26,16 @@ def format_log(epoch, i, errors, t, prefix=True):
     return message
 
 
+def parse_gpu_ids(gpu_ids):
+    str_ids = gpu_ids.split(',')
+    gpu_ids = []
+    for str_id in str_ids:
+        gpu_id = int(str_id)
+        if gpu_id >= 0:
+            gpu_ids.append(gpu_id)
+    return gpu_ids
+
+
 def listdir_full_path(path):
     return [os.path.join(path, f) for f in os.listdir(path)]
 
@@ -43,3 +53,35 @@ def save_image(image, path, start=None, end=None):
             array = image[:, :, i].astype(np.uint16)
             array2list = array[:, :].tolist()
             writer.write(f, array2list)
+
+
+def parse_opt_file(opt_path):
+    def parse_val(s):
+        if s == 'None':
+            return None
+        if s == 'True':
+            return True
+        if s == 'False':
+            return False
+        if s == 'inf':
+            return float('inf')
+        try:
+            float_value = float(s)
+            # special case
+            if '.' in s:
+                return float_value
+            i = int(float_value)
+            return i if i == float_value else float_value
+        except ValueError:
+            return s
+
+    opt = None
+    with open(opt_path) as f:
+        opt = dict()
+        for line in f:
+            if line.startswith('-----'):
+                continue
+            k, v = line.split(':')
+            opt[k.strip()] = parse_val(v.strip())
+    return opt
+

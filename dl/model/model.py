@@ -9,9 +9,11 @@ import torch
 import torchvision.utils as vutils
 from torch.autograd import Variable
 from torch.nn.functional import binary_cross_entropy
+from torch.utils.tensorboard import SummaryWriter
+from torch.nn.functional import l1_loss
 
 import dl.model.networks as networks
-from util.util import print_log, format_log
+from util.util import print_log, format_log, parse_gpu_ids
 
 
 class Model(object):
@@ -62,18 +64,23 @@ class Model(object):
     :type save_epoch_freq: int
     :param print_freq: frequency of showing training results on console.
     :type print_freq: int
+    :param tensorbard: if tensorboard.
+    :type tensorbard: bool
+    :param tensorbard_writer: tensorboard writer.
+    :type tensorbard_writer: tensorbard_writer
     :param testing: if test phase.
     :type testing: bool
     """
 
-    def __init__(self, expr_dir, seed=None, gpu_ids='0', batch_size=None,
+    def __init__(self, expr_dir, seed=None, gpu_ids='-1', batch_size=None,
                  epoch_count=1, niter=100, niter_decay=100, beta1=0.5, lr=0.0002,
-                 ngf=64, n_blocks=9, input_nc=1, output_nc=1, use_dropout=False, norm='batch', max_gnorm=500.,
-                 monitor_gnorm=True, save_epoch_freq=5, print_freq=100, display_freq=100, testing=False):
+                 ngf=64, n_blocks=1, input_nc=1, output_nc=1, use_dropout=False, norm='batch', max_gnorm=500.,
+                 monitor_gnorm=True, save_epoch_freq=5, print_freq=100, display_freq=100, tensorbard=True,
+                 tensorbard_writer=None, testing=False):
 
         self.expr_dir = expr_dir
         self.seed = seed
-        self.gpu_ids = gpu_ids
+        self.gpu_ids = parse_gpu_ids(gpu_ids)
         self.batch_size = batch_size
 
         self.epoch_count = epoch_count
@@ -96,6 +103,13 @@ class Model(object):
         self.save_epoch_freq = save_epoch_freq
         self.print_freq = print_freq
         self.display_freq = display_freq
+        self.tensorbard = tensorbard
+        self.tensorbard_writer = tensorbard_writer
+        if self.tensorbard:
+            self.tensorbard_writer = SummaryWriter(os.path.join(expr_dir, 'TensorBoard'))
+        # Set gpu ids
+        if len(self.gpu_ids) > 0:
+            torch.cuda.set_device(self.gpu_ids[0])
 
         # define network we need here
         self.netG = networks.define_generator(input_nc=self.input_nc, output_nc=self.output_nc, ngf=self.ngf,
@@ -112,6 +126,9 @@ class Model(object):
         if not os.path.exists(expr_dir):
             os.makedirs(expr_dir)
 
+        if not os.path.exists(os.path.join(expr_dir, 'TensorBoard')) and self.tensorbard:
+            os.makedirs(os.path.join(expr_dir, 'TensorBoard'))
+
         if not testing:
             num_params = 0
             with open("%s/nets.txt" % self.expr_dir, 'w') as nets_f:
@@ -119,14 +136,16 @@ class Model(object):
                 nets_f.write('# parameters: %d\n' % num_params)
                 nets_f.flush()
 
-    def train(self, train_dataset):
+    def train(self, train_dataset, test_dataset=None):
         """Train the model with a dataset.
 
         :param train_dataset: training dataset
         :type train_dataset: :class:`DataLoader`
+        :param test_dataset: test dataset
+        :type test_dataset: :class:`DataLoader`
         """
         self.batch_size = train_dataset.batch_size
-        # ToDo opt.txt
+        self.save_options()
         out_f = open(f"{self.expr_dir}/results.txt", 'w')
         use_gpu = len(self.gpu_ids) > 0
 
@@ -147,7 +166,7 @@ class Model(object):
 
             for i, data in enumerate(train_dataset):
                 ct = Variable(data['ct'])
-                mask = Variable(data['mask_name'])
+                mask = Variable(data['mask'])
 
                 total_steps += self.batch_size
                 epoch_iter += self.batch_size
@@ -168,18 +187,28 @@ class Model(object):
                 if total_steps % self.print_freq == 0:
                     t = (time.time() - print_start_time) / self.batch_size
                     print_log(out_f, format_log(epoch, epoch_iter, losses, t))
+                    if self.tensorbard:
+                        self.tensorbard_writer.add_scalars('training losses', {'Loss': losses['Loss']}, total_steps)
                     print_start_time = time.time()
 
             if epoch % self.save_epoch_freq == 0:
                 print_log(out_f, 'saving the model at the end of epoch %d, iterations %d' %
                           (epoch, total_steps))
                 self.save('latest')
+                if test_dataset:
+                    train_mae = self.eval_mae(train_dataset)
+                    test_mae = self.eval_mae(test_dataset)
+                    self.tensorbard_writer.add_scalars('accuracy', {'Train': train_mae,
+                                                                    'Test': test_mae}, epoch)
 
             print_log(out_f, 'End of epoch %d / %d \t Time Taken: %d sec' %
                       (epoch, self.niter + self.niter_decay, time.time() - epoch_start_time))
 
             if epoch > self.niter:
                 self.update_learning_rate()
+
+            out_f.close()
+            self.tensorbard_writer.close()
 
     def train_instance(self, ct, segmentation):
         """Training instance (batch)
@@ -260,21 +289,57 @@ class Model(object):
         """Sets the module in evaluation mode."""
         self.netG.eval()
 
-    def visualize_training(self, visuals, eidx, uidx):
-        ct = (visuals['ct'] + 1.) * 1250.
-        segmentation_mask = visuals['segmentation_mask']
-        fake_segmentation_mask = visuals['fake_segmentation_mask']
+    def visualize_training(self, visuals, epoch, index):
+        """Save training image for visualization.
 
-        size = ct.size()
+        :param visuals: images.
+        :type visuals: dict
+        :param epoch: epoch
+        :type epoch: int
+        :param index: index
+        :type index: float
+        """
+        visuals['ct'] = (visuals['ct'] + 1.) * 1250.
+        size = visuals['ct'].size()
 
         images = [img.cpu().unsqueeze(1) for img in visuals.values()]
         vis_image = torch.cat(images, dim=1).view(size[0] * len(images), size[1], size[2], size[3])
         save_path = os.path.join(self.expr_dir, "training_visuals")
-        save_path = os.path.join(save_path, 'cycle_%02d_%04d.png' % (eidx, uidx))
-        a = vutils.make_grid(vis_image.cpu(), nrow=len(images))
-        a = a[0].numpy()
+        save_path = os.path.join(save_path, 'cycle_%02d_%04d.png' % (epoch, index))
+        image = vutils.make_grid(vis_image.cpu(), nrow=len(images))
+        image = image[0].numpy()
         with open(save_path, 'wb') as f:
-            writer = png.Writer(width=a.shape[1], height=a.shape[0], bitdepth=16, greyscale=True)
-            array = a.astype(np.uint16)
+            writer = png.Writer(width=image.shape[1], height=image.shape[0], bitdepth=16, greyscale=True)
+            array = image.astype(np.uint16)
             array2list = array[:, :].tolist()
             writer.write(f, array2list)
+
+    def save_options(self):
+        """Save model options."""
+        # ToDo deal with none default type (not working with parse_opt_file()
+        options_file = open(f"{self.expr_dir}/options.txt", 'wt')
+        print_log(options_file, '------------ Options -------------')
+        for k, v in sorted(self.__dict__.items()):
+            print_log(options_file, '%s: %s' % (str(k), str(v)))
+        print_log(options_file, '-------------- End ----------------')
+
+    def eval_mae(self, dataset, use_gpu=True):
+        """Evaluation metric using MAE.
+
+        :param dataset: training dataset
+        :type dataset: :class:`DataLoader`
+        :param use_gpu: if gpu
+        :type use_gpu: bool
+        :return: MAE of the dataset
+        :rtype: float
+        """
+        mae = []
+        for batch in dataset:
+            ct, mask = Variable(batch['ct']), Variable(batch['mask'])
+            if use_gpu:
+                ct = ct.cuda()
+                mask = mask.cuda()
+
+            fake_mask = self.netG.forward(ct)
+            mae.append(l1_loss(mask, fake_mask.data).item())
+        return np.mean(mae)

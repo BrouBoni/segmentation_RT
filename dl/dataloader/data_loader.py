@@ -93,7 +93,7 @@ class AlignedDataset(data.Dataset):
 
         dataset = OrderedDict([('patientID', self.ct_paths[index]),
                                ('ct', ct_torch.type(torch.float32).unsqueeze_(0)),
-                               ('mask_name', mask_torch.unsqueeze_(0))
+                               ('mask', mask_torch.unsqueeze_(0))
                                ])
 
         return dataset

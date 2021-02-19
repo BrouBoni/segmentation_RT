@@ -113,6 +113,9 @@ class ResnetGenerator(nn.Module):
         else:
             return self.model(x)
 
+    def __str__(self):
+        return "ResnetGenerator"
+
 
 class ResnetBlock(nn.Module):
     """Initialize the Resnet block
