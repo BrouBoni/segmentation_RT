@@ -22,6 +22,8 @@ provided to do so:
 
    rs2mask/modules
    mask2rs/modules
+   dl/modules
+
 
 Indices and tables
 ==================

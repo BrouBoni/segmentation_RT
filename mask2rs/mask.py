@@ -60,9 +60,9 @@ class Mask:
         """The mapping of pixel location (c,r) to Reference Coordinate System (RCS).
 
         :param c: column.
-        :type c: int
+        :type c: float
         :param r: row.
-        :type r: int
+        :type r: float
         :param image_position_patient: The x, y, and z coordinates of the
             upper left hand corner of the image, in mm.
         :type image_position_patient: :class:`pydicom.dataelem.DataElement`
