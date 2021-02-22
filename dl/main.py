@@ -1,6 +1,6 @@
 import os
 
-from dataloader.data_loader import DataLoader
+from dataloader.dataloader import DataLoader
 from model.model import Model
 
 if __name__ == "__main__":

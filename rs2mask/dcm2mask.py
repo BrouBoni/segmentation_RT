@@ -1,7 +1,6 @@
 import os
 import random
 import shutil
-from typing import Union
 
 import nibabel as nib
 import numpy as np
@@ -11,16 +10,29 @@ from util.util import listdir_full_path, save_image
 
 
 class Dataset:
+    """
+    From dicom to dataset class. Convert CT and RTs files into PNG, readable by deep learning frameworks.
 
-    path_dataset: Union[str]
+    :param string path:
+        Root directory.
 
-    def __init__(self, opt, path=None, structures=None, name=None):
-        self.path = path or opt.root
-        self.ref_structures = structures or opt.structures
-        self.dataset_name = name or opt.name
+    :param string name:
+        Name of the dataset.
+
+    :param List[string] structures:
+        List of desired structure(s).
+
+    :param string export:
+        Export path.
+    """
+
+    def __init__(self, path, name, structures, export):
+        self.path = path
+        self.structures = structures
+        self.dataset_name = name
+        self.export_path = os.path.join(export, name)
 
         self.root_path = os.path.dirname(self.path)
-        self.export_path = os.path.join(opt.export, opt.name)
         self.patients = [folder for folder in os.listdir(self.path) if
                          os.path.isdir(os.path.join(self.path, folder))]
         self.patient_paths = [os.path.join(self.path, patient) for patient in self.patients]
@@ -32,6 +44,10 @@ class Dataset:
         return self.dataset_name
 
     def get_rs(self):
+        """List RT Structure file for each patient.
+
+        :rtype: list[str]
+        """
         rs_paths = []
         for path in self.patient_paths:
             files = [filename for filename in os.listdir(path) if filename.startswith("RS")]
@@ -41,20 +57,37 @@ class Dataset:
         return rs_paths
 
     def find_structures(self, index):
+        """List missing and not missing structures in a RT Structure file.
+
+        :param index: index of the patient.
+        :type index: int
+        :return: List missing and not missing structures.
+        :rtype: (list[str],list[str])
+        """
         structures = list_rt_structs(self.rs_paths[index])
-        ref_structures = np.array(self.ref_structures)
+        ref_structures = np.array(self.structures)
         maks = np.in1d(ref_structures, structures)
         not_missing = ref_structures[maks]
         missing = ref_structures[~maks]
 
         if len(missing):
-            print(f"\n********************\n-> WARNING ! Some structures are missing :  {missing}\n")
+            print(f"WARNING ! Some structures are missing :  {missing}\n")
 
         return missing, not_missing
 
     def nii_to_png(self, name, nii, patient_id):
-        image = nii.get_fdata()
+        """Convert nii file to png.
+
+        :param name: filename.
+        :type name: str
+        :param nii: nii object.
+        :type nii: :class:`nib.nifti1.Nifti1Image`
+        :param patient_id: patient identification number.
+        :type patient_id: str
+        """
+        image = nii.get_fdata(dtype=np.float32)[:]
         name = name.lower()
+        # ToDo apply affine transform
         image = np.fliplr(np.rot90(np.asarray(image), 3))
 
         if name == 'ct':
@@ -65,7 +98,8 @@ class Dataset:
         save_image(image, save_path)
 
     def make_png(self):
-        print(f"Structure(s) to export: {self.ref_structures}")
+        """Create mask for each structure for all patients."""
+        print(f"Structure(s) to export: {self.structures}")
         print(f"Patient(s) identification : {self.patients}")
 
         for index, path_patient in enumerate(self.patient_paths):
@@ -88,7 +122,14 @@ class Dataset:
             shutil.rmtree(nii_output)
         print(f"Export done")
 
-    def sort_dataset(self, ratio=0.8, structure=None):
+    def sort_dataset(self, structure, ratio=0.8):
+        """Create a dataset
+
+        :param structure: selected structure.
+        :type structure: str
+        :param ratio: ration train/test set.
+        :type ratio: float
+        """
         path_dataset = self.path_dataset
         path_out = self.export_path
         print(f"Making {structure} dataset at {path_out}")

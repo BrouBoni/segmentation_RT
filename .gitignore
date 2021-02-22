@@ -144,5 +144,6 @@ fabric.properties
 __pycache__/
 *.py[cod]
 /.idea/
+/.spyproject/
 */data/
 /datasets/
