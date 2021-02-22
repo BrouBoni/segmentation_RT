@@ -91,9 +91,55 @@ class AlignedDataset(data.Dataset):
         mask_img = transform(mask_img)
         mask_torch = torch.from_numpy(np.array(mask_img, dtype=np.float32))
 
-        dataset = OrderedDict([('patientID', self.ct_paths[index]),
+        dataset = OrderedDict([('patientID', ct_path),
                                ('ct', ct_torch.type(torch.float32).unsqueeze_(0)),
                                ('mask', mask_torch.unsqueeze_(0))
+                               ])
+
+        return dataset
+
+    def __len__(self):
+        return self.size
+
+
+class SingleDataset(data.Dataset):
+    """This dataset class can load a set of images specified by the path.
+
+    It assumes that the directory '/root/' contains CT images.
+
+    :param string root:
+        Root directory.
+
+    :param string mask_name:
+        Name of the mask.
+
+    :param int load_size:
+        Load images at this size.
+    """
+
+    def __init__(self, root, mask_name, load_size):
+
+        self.root = root
+        self.mask = mask_name
+        self.load_size = load_size
+
+        self.ct_paths = sorted(make_dataset(self.root))
+        self.size = len(self.ct_paths)
+
+    def __getitem__(self, index):
+        ct_path = self.ct_paths[index]
+
+        ct_img = Image.open(ct_path).convert('I')
+
+        parameters = get_transform_parameters(self.load_size, self.load_size, False)
+        transform = get_transform(parameters)
+
+        ct_img = transform(ct_img)
+        ct_torch = torch.from_numpy(np.array(ct_img, dtype=np.float32))
+        ct_torch = ct_torch.clamp(0, 2500) / 1250. - 1.
+
+        dataset = OrderedDict([('ct_path', ct_path),
+                               ('ct', ct_torch.type(torch.float32).unsqueeze_(0))
                                ])
 
         return dataset
@@ -138,9 +184,12 @@ class DataLoader(object):
 
     def __init__(self, root, mask_name, subset, batch_size=1, load_size=512, crop_size=512, flip=False,
                  shuffle=False, drop_last=False):
-
-        self.dataset = AlignedDataset(root, mask_name, load_size, crop_size, flip, subset)
         self.subset = subset
+        if self.subset == "prediction":
+            self.dataset = SingleDataset(root, mask_name, load_size)
+        else:
+            self.dataset = AlignedDataset(root, mask_name, load_size, crop_size, flip, subset)
+
         self.dataloader = torch.utils.data.DataLoader(
             dataset=self.dataset,
             batch_size=batch_size,

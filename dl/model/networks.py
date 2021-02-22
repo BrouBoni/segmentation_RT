@@ -37,7 +37,7 @@ def define_generator(input_nc, output_nc, ngf, n_blocks,
     :param use_dropout: if use dropout layers.
     :type use_dropout: bool
     :param gpu_ids:  gpu id.
-    :type gpu_ids: str
+    :type gpu_ids: list[int]
     :return: a generator.
     :rtype: :class:`torch.nn.Module`
     """
@@ -70,7 +70,7 @@ def print_network(net, out_f=None):
     num_params = 0
     for param in net.parameters():
         num_params += param.numel()
-    # print(net)
+
     if out_f is not None:
         out_f.write(net.__repr__() + "\n")
         out_f.write('Total number of parameters: %d\n' % num_params)

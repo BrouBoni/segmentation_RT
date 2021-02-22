@@ -2,18 +2,18 @@ import os
 import random
 import time
 from collections import OrderedDict
+from datetime import datetime
 
 import numpy as np
-import png
 import torch
 import torchvision.utils as vutils
 from torch.autograd import Variable
 from torch.nn.functional import binary_cross_entropy
-from torch.utils.tensorboard import SummaryWriter
 from torch.nn.functional import l1_loss
+from torch.utils.tensorboard import SummaryWriter
 
 import dl.model.networks as networks
-from util.util import print_log, format_log, parse_gpu_ids
+from util.util import print_log, format_log, parse_gpu_ids, save_png
 
 
 class Model(object):
@@ -27,7 +27,7 @@ class Model(object):
     :param seed: manual seed.
     :type seed: int
     :param gpu_ids: gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU.
-    :type gpu_ids: str
+    :type gpu_ids:
     :param batch_size: input batch size.
     :type batch_size: int
     :param epoch_count: the starting epoch count.
@@ -72,9 +72,9 @@ class Model(object):
     :type testing: bool
     """
 
-    def __init__(self, expr_dir, seed=None, gpu_ids='-1', batch_size=None,
+    def __init__(self, expr_dir, seed=None, gpu_ids='0', batch_size=None,
                  epoch_count=1, niter=100, niter_decay=100, beta1=0.5, lr=0.0002,
-                 ngf=64, n_blocks=1, input_nc=1, output_nc=1, use_dropout=False, norm='batch', max_gnorm=500.,
+                 ngf=64, n_blocks=3, input_nc=1, output_nc=1, use_dropout=False, norm='batch', max_gnorm=500.,
                  monitor_gnorm=True, save_epoch_freq=5, print_freq=100, display_freq=100, tensorbard=True,
                  tensorbard_writer=None, testing=False):
 
@@ -105,8 +105,9 @@ class Model(object):
         self.display_freq = display_freq
         self.tensorbard = tensorbard
         self.tensorbard_writer = tensorbard_writer
+        self.time = datetime.now().strftime("%Y%m%d-%H%M%S")
         if self.tensorbard:
-            self.tensorbard_writer = SummaryWriter(os.path.join(expr_dir, 'TensorBoard'))
+            self.tensorbard_writer = SummaryWriter(os.path.join(expr_dir, 'TensorBoard', self.time))
         # Set gpu ids
         if len(self.gpu_ids) > 0:
             torch.cuda.set_device(self.gpu_ids[0])
@@ -127,7 +128,10 @@ class Model(object):
             os.makedirs(expr_dir)
 
         if not os.path.exists(os.path.join(expr_dir, 'TensorBoard')) and self.tensorbard:
-            os.makedirs(os.path.join(expr_dir, 'TensorBoard'))
+            os.makedirs(os.path.join(expr_dir, 'TensorBoard', self.time))
+
+        if not os.path.exists(os.path.join(expr_dir, 'training_visuals')) and self.tensorbard:
+            os.makedirs(os.path.join(expr_dir, 'training_visuals'))
 
         if not testing:
             num_params = 0
@@ -141,7 +145,7 @@ class Model(object):
 
         :param train_dataset: training dataset
         :type train_dataset: :class:`DataLoader`
-        :param test_dataset: test dataset
+        :param test_dataset: test dataset. If given output statistic during training.
         :type test_dataset: :class:`DataLoader`
         """
         self.batch_size = train_dataset.batch_size
@@ -176,13 +180,17 @@ class Model(object):
                     mask = mask.cuda()
                     self.w_lambda = self.w_lambda.cuda()
 
+                if self.tensorbard:
+                    self.tensorbard_writer.add_graph(self.netG, ct)
+
                 if self.monitor_gnorm:
                     losses, visuals, gnorms = self.train_instance(ct, mask)
                 else:
                     losses, visuals = self.train_instance(ct, mask)
 
                 if total_steps % self.display_freq == 0:
-                    self.visualize_training(visuals, epoch, epoch_iter / self.batch_size)
+                    visualize_training = self.visualize_training(visuals, epoch, epoch_iter / self.batch_size)
+                    self.tensorbard_writer.add_image('Training images', visualize_training, total_steps)
 
                 if total_steps % self.print_freq == 0:
                     t = (time.time() - print_start_time) / self.batch_size
@@ -198,8 +206,12 @@ class Model(object):
                 if test_dataset:
                     train_mae = self.eval_mae(train_dataset)
                     test_mae = self.eval_mae(test_dataset)
-                    self.tensorbard_writer.add_scalars('accuracy', {'Train': train_mae,
-                                                                    'Test': test_mae}, epoch)
+                    if self.tensorbard:
+                        self.tensorbard_writer.add_scalars('accuracy', {'Train': train_mae,
+                                                                        'Test': test_mae}, epoch)
+
+                    print_log(out_f, 'Train MAE: %.4f, Test MAE: %.4f. \t' %
+                              (train_mae, test_mae))
 
             print_log(out_f, 'End of epoch %d / %d \t Time Taken: %d sec' %
                       (epoch, self.niter + self.niter_decay, time.time() - epoch_start_time))
@@ -207,11 +219,12 @@ class Model(object):
             if epoch > self.niter:
                 self.update_learning_rate()
 
-            out_f.close()
+        out_f.close()
+        if self.tensorbard:
             self.tensorbard_writer.close()
 
     def train_instance(self, ct, segmentation):
-        """Training instance (batch)
+        """Training instance (batch).
 
         :param ct: input tensor.
         :type ct: Tensor
@@ -240,18 +253,6 @@ class Model(object):
 
         return losses, visuals
 
-    def synthesize(self, ct):
-        """Evaluate a CT image.
-
-        :param ct: CT image.
-        :type ct: Tensor
-        :return: Synthesized mask.
-        :rtype: dict[Tensor]
-        """
-        fake_segmentation = self.netG.forward(ct)
-        visuals = OrderedDict([('fake_segmentation_mask', fake_segmentation.data)])
-        return visuals
-
     def update_learning_rate(self):
         """Update learning rate"""
         lrd = self.lr / self.niter_decay
@@ -275,15 +276,19 @@ class Model(object):
         }
         torch.save(checkpoint, checkpoint_path)
 
-    def load(self, checkpoint_path):
+    def load(self, checkpoint_path, optimizer=False):
         """Loads an object saved with torch.save from a file.
 
         :param checkpoint_path: path to the checkpoint.
         :type checkpoint_path: str
+        :param optimizer: with optimizer.
+        :type optimizer: bool
         """
         checkpoint = torch.load(checkpoint_path)
         self.netG.load_state_dict(checkpoint['netG'])
-        self.optimizer_G.load_state_dict(checkpoint['optimizer_G'])
+
+        if optimizer:
+            self.optimizer_G.load_state_dict(checkpoint['optimizer_G'])
 
     def eval(self):
         """Sets the module in evaluation mode."""
@@ -308,11 +313,9 @@ class Model(object):
         save_path = os.path.join(save_path, 'cycle_%02d_%04d.png' % (epoch, index))
         image = vutils.make_grid(vis_image.cpu(), nrow=len(images))
         image = image[0].numpy()
-        with open(save_path, 'wb') as f:
-            writer = png.Writer(width=image.shape[1], height=image.shape[0], bitdepth=16, greyscale=True)
-            array = image.astype(np.uint16)
-            array2list = array[:, :].tolist()
-            writer.write(f, array2list)
+        save_png(image, save_path)
+
+        return vutils.make_grid(vis_image.cpu(), normalize=True, nrow=len(images))
 
     def save_options(self):
         """Save model options."""
@@ -326,11 +329,11 @@ class Model(object):
     def eval_mae(self, dataset, use_gpu=True):
         """Evaluation metric using MAE.
 
-        :param dataset: training dataset
+        :param dataset: training dataset.
         :type dataset: :class:`DataLoader`
-        :param use_gpu: if gpu
+        :param use_gpu: if gpu.
         :type use_gpu: bool
-        :return: MAE of the dataset
+        :return: MAE of the dataset.
         :rtype: float
         """
         mae = []
@@ -343,3 +346,36 @@ class Model(object):
             fake_mask = self.netG.forward(ct)
             mae.append(l1_loss(mask, fake_mask.data).item())
         return np.mean(mae)
+
+    def test(self, dataset, export_path=None, checkpoint=None, use_gpu=True):
+        """Model prediction for a SingleDataset.
+
+        :param dataset: training dataset.
+        :type dataset: :class:`DataLoader`
+        :param export_path: export path.
+        :type export_path: str
+        :param use_gpu: if gpu.
+        :type use_gpu: bool
+        :return: MAE of the dataset.
+        :rtype: float
+        """
+        checkpoint = checkpoint or os.path.join(self.expr_dir, "latest")
+        self.load(checkpoint)
+        self.eval()
+
+        prediction_path = export_path or os.path.join(self.expr_dir, f"prediction_{dataset.dataset.mask}")
+        if not os.path.exists(prediction_path):
+            os.makedirs(prediction_path)
+
+        for i, data in enumerate(dataset):
+            ct = data['ct']
+            path = data['ct_path'][0]
+            name = os.path.basename(path)
+
+            if use_gpu:
+                ct = ct.cuda()
+
+            with torch.no_grad():
+                fake_segmentation = self.netG.forward(ct).cpu()
+                fake_segmentation = fake_segmentation.numpy()
+                save_png(fake_segmentation[0, 0], os.path.join(prediction_path, name))

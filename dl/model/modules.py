@@ -54,7 +54,7 @@ class ResnetGenerator(nn.Module):
     :param bool use_dropout:
         if use dropout layers.
 
-    :param string gpu_ids:
+    :param list[int] gpu_ids:
         gpu id.
     """
 
