@@ -22,15 +22,12 @@ class Dataset:
     :param List[string] structures:
         List of desired structure(s).
 
-    :param string export:
-        Export path.
     """
 
-    def __init__(self, path, name, structures, export):
+    def __init__(self, path, name, structures):
         self.path = path
         self.structures = structures
         self.dataset_name = name
-        self.export_path = os.path.join(export, name)
 
         self.root_path = os.path.dirname(self.path)
         self.patients = [folder for folder in os.listdir(self.path) if
@@ -86,7 +83,8 @@ class Dataset:
         :type patient_id: str
         """
         image = nii.get_fdata(dtype=np.float32)[:]
-        name = name.lower()
+        # ToDo name convention
+        # name = name.lower()
         # ToDo apply affine transform
         image = np.fliplr(np.rot90(np.asarray(image), 3))
 
@@ -103,8 +101,8 @@ class Dataset:
         print(f"Patient(s) identification : {self.patients}")
 
         for index, path_patient in enumerate(self.patient_paths):
-            print(f"Exporting {index + 1} on {len(self.patients)}")
             patient_id = self.patients[index]
+            print(f"Exporting {index + 1} ({patient_id}) on {len(self.patients)}")
             nii_output = os.path.join(path_patient, "output")
 
             _, not_missing = self.find_structures(index)
@@ -113,7 +111,7 @@ class Dataset:
             nii_maks = [nii_mask for nii_mask in os.listdir(nii_output) if nii_mask.startswith('mask')]
             for nii in nii_maks:
                 nii_object = nib.load(os.path.join(nii_output, nii))
-                name = os.path.splitext(nii)[0].split("_")[1].replace("-", "_")
+                name = os.path.splitext(nii)[0].split("_")[1].replace("-", " ")
                 self.nii_to_png(name, nii_object, patient_id)
 
             ct_nii_object = nib.load(os.path.join(nii_output, "image.nii"))
@@ -122,16 +120,18 @@ class Dataset:
             shutil.rmtree(nii_output)
         print(f"Export done")
 
-    def sort_dataset(self, structure, ratio=0.8):
+    def sort_dataset(self, structure, export_path, ratio=0.8):
         """Create a dataset
 
         :param structure: selected structure.
         :type structure: str
+        :param export_path: export path.
+        :type export_path: str
         :param ratio: ration train/test set.
         :type ratio: float
         """
         path_dataset = self.path_dataset
-        path_out = self.export_path
+        path_out = os.path.join(export_path, self.dataset_name)
         print(f"Making {structure} dataset at {path_out}")
 
         folders = [structure, 'ct']

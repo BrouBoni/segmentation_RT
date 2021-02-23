@@ -56,27 +56,22 @@ class Model(object):
     :type use_dropout: bool
     :param norm: normalization.
     :type norm: str
-    :param max_gnorm: max grad norm to which it will be clipped (if exceeded).
-    :type max_gnorm: float
-    :param monitor_gnorm: flag set to monitor grad norms.
-    :type monitor_gnorm: bool
+    :param max_grad_norm: max grad norm to which it will be clipped (if exceeded).
+    :type max_grad_norm: float
+    :param monitor_grad_norm: flag set to monitor grad norms.
+    :type monitor_grad_norm: bool
     :param save_epoch_freq: frequency of saving checkpoints at the end of epochs.
     :type save_epoch_freq: int
     :param print_freq: frequency of showing training results on console.
     :type print_freq: int
-    :param tensorbard: if tensorboard.
-    :type tensorbard: bool
-    :param tensorbard_writer: tensorboard writer.
-    :type tensorbard_writer: tensorbard_writer
     :param testing: if test phase.
     :type testing: bool
     """
 
     def __init__(self, expr_dir, seed=None, gpu_ids='0', batch_size=None,
                  epoch_count=1, niter=100, niter_decay=100, beta1=0.5, lr=0.0002,
-                 ngf=64, n_blocks=3, input_nc=1, output_nc=1, use_dropout=False, norm='batch', max_gnorm=500.,
-                 monitor_gnorm=True, save_epoch_freq=5, print_freq=100, display_freq=100, tensorbard=True,
-                 tensorbard_writer=None, testing=False):
+                 ngf=64, n_blocks=9, input_nc=1, output_nc=1, use_dropout=False, norm='batch', max_grad_norm=500.,
+                 monitor_grad_norm=True, save_epoch_freq=5, print_freq=1000, display_freq=10000, testing=False):
 
         self.expr_dir = expr_dir
         self.seed = seed
@@ -96,18 +91,15 @@ class Model(object):
         self.output_nc = output_nc
         self.use_dropout = use_dropout
         self.norm = norm
-        self.max_gnorm = max_gnorm
+        self.max_grad_norm = max_grad_norm
         self.w_lambda = torch.tensor(1, dtype=torch.float)
 
-        self.monitor_gnorm = monitor_gnorm
+        self.monitor_grad_norm = monitor_grad_norm
         self.save_epoch_freq = save_epoch_freq
         self.print_freq = print_freq
         self.display_freq = display_freq
-        self.tensorbard = tensorbard
-        self.tensorbard_writer = tensorbard_writer
         self.time = datetime.now().strftime("%Y%m%d-%H%M%S")
-        if self.tensorbard:
-            self.tensorbard_writer = SummaryWriter(os.path.join(expr_dir, 'TensorBoard', self.time))
+
         # Set gpu ids
         if len(self.gpu_ids) > 0:
             torch.cuda.set_device(self.gpu_ids[0])
@@ -127,10 +119,10 @@ class Model(object):
         if not os.path.exists(expr_dir):
             os.makedirs(expr_dir)
 
-        if not os.path.exists(os.path.join(expr_dir, 'TensorBoard')) and self.tensorbard:
+        if not os.path.exists(os.path.join(expr_dir, 'TensorBoard')):
             os.makedirs(os.path.join(expr_dir, 'TensorBoard', self.time))
 
-        if not os.path.exists(os.path.join(expr_dir, 'training_visuals')) and self.tensorbard:
+        if not os.path.exists(os.path.join(expr_dir, 'training_visuals')):
             os.makedirs(os.path.join(expr_dir, 'training_visuals'))
 
         if not testing:
@@ -152,6 +144,8 @@ class Model(object):
         self.save_options()
         out_f = open(f"{self.expr_dir}/results.txt", 'w')
         use_gpu = len(self.gpu_ids) > 0
+
+        tensorbard_writer = SummaryWriter(os.path.join(self.expr_dir, 'TensorBoard', self.time))
 
         if self.seed is not None:
             print(f"using random seed: {self.seed}")
@@ -180,23 +174,21 @@ class Model(object):
                     mask = mask.cuda()
                     self.w_lambda = self.w_lambda.cuda()
 
-                if self.tensorbard:
-                    self.tensorbard_writer.add_graph(self.netG, ct)
+                tensorbard_writer.add_graph(self.netG, ct)
 
-                if self.monitor_gnorm:
-                    losses, visuals, gnorms = self.train_instance(ct, mask)
+                if self.monitor_grad_norm:
+                    losses, visuals, grad_norms = self.train_instance(ct, mask)
                 else:
                     losses, visuals = self.train_instance(ct, mask)
 
                 if total_steps % self.display_freq == 0:
                     visualize_training = self.visualize_training(visuals, epoch, epoch_iter / self.batch_size)
-                    self.tensorbard_writer.add_image('Training images', visualize_training, total_steps)
+                    tensorbard_writer.add_image('Training images', visualize_training, total_steps)
 
                 if total_steps % self.print_freq == 0:
                     t = (time.time() - print_start_time) / self.batch_size
                     print_log(out_f, format_log(epoch, epoch_iter, losses, t))
-                    if self.tensorbard:
-                        self.tensorbard_writer.add_scalars('training losses', {'Loss': losses['Loss']}, total_steps)
+                    tensorbard_writer.add_scalars('training losses', {'Loss': losses['Loss']}, total_steps)
                     print_start_time = time.time()
 
             if epoch % self.save_epoch_freq == 0:
@@ -206,9 +198,8 @@ class Model(object):
                 if test_dataset:
                     train_mae = self.eval_mae(train_dataset)
                     test_mae = self.eval_mae(test_dataset)
-                    if self.tensorbard:
-                        self.tensorbard_writer.add_scalars('accuracy', {'Train': train_mae,
-                                                                        'Test': test_mae}, epoch)
+                    tensorbard_writer.add_scalars('accuracy', {'Train': train_mae,
+                                                               'Test': test_mae}, epoch)
 
                     print_log(out_f, 'Train MAE: %.4f, Test MAE: %.4f. \t' %
                               (train_mae, test_mae))
@@ -220,8 +211,7 @@ class Model(object):
                 self.update_learning_rate()
 
         out_f.close()
-        if self.tensorbard:
-            self.tensorbard_writer.close()
+        tensorbard_writer.close()
 
     def train_instance(self, ct, segmentation):
         """Training instance (batch).
@@ -237,7 +227,7 @@ class Model(object):
 
         self.optimizer_G.zero_grad()
         loss.backward()
-        gnorm = torch.nn.utils.clip_grad_norm_(self.netG.parameters(), self.max_gnorm)
+        grad_norm = torch.nn.utils.clip_grad_norm_(self.netG.parameters(), self.max_grad_norm)
         self.optimizer_G.step()
 
         losses = OrderedDict([('Loss', loss.data.item())])
@@ -246,10 +236,10 @@ class Model(object):
                                ('segmentation_mask', segmentation.data),
                                ('fake_segmentation_mask', fake_segmentation.data)
                                ])
-        if self.monitor_gnorm:
-            gnorms = OrderedDict([('gnorm', gnorm)])
+        if self.monitor_grad_norm:
+            grad_norm = OrderedDict([('grad_norm', grad_norm)])
 
-            return losses, visuals, gnorms
+            return losses, visuals, grad_norm
 
         return losses, visuals
 

@@ -139,7 +139,6 @@ fabric.properties
 .idea/codestream.xml
 
 # End of https://www.toptal.com/developers/gitignore/api/pycharm,macos
-/rs2mask/data/
 *.dcm
 __pycache__/
 *.py[cod]
@@ -147,3 +146,7 @@ __pycache__/
 /.spyproject/
 */data/
 /datasets/
+/docs/_build/
+/prediction/
+/data/
+/checkpoints/

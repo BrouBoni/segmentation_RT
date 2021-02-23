@@ -1,6 +1,5 @@
 import functools
 
-import torch
 import torch.nn as nn
 
 
@@ -108,7 +107,7 @@ class ResnetGenerator(nn.Module):
 
     def forward(self, x):
         """Standard forward"""
-        if len(self.gpu_ids) > 1 and isinstance(x.data, torch.cuda.FloatTensor):
+        if len(self.gpu_ids) > 1:
             return nn.parallel.data_parallel(self.model, x, self.gpu_ids)
         else:
             return self.model(x)

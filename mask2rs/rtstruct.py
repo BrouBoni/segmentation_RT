@@ -204,9 +204,10 @@ class RTStruct:
             self.add_structure_to_dataset(structure, index, coordinates)
             print(mask_name, " ", str(index + 1), "/", str(len(self.mask.masks)))
 
-    def save(self, name='RS.dcm'):
+    def save(self, name=None):
         """Save in dicom format.
         :param name: name of the file.
         :type name: str
         """
+        name = name or os.path.join(self.path, "RS.dcm")
         self.ds_rs.save_as(name, write_like_original=False)
