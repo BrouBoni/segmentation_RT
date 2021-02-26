@@ -8,6 +8,7 @@ from pydicom import dcmread
 from pydicom.tag import Tag
 from skimage import morphology
 from skimage.measure import find_contours
+from scipy import interpolate
 
 
 class Mask:
@@ -123,6 +124,16 @@ class Mask:
             contours = find_contours(img)
             for contour in contours:
                 if len(contour):
+                    x = np.array(contour[:, 1])
+                    y = np.array(contour[:, 0])
+                    l = len(x)
+
+                    # s is how much we want the spline to stick the points. If too high, interpolation 'moves away'
+                    # from the real outline. If too small, it creates a crenellation
+                    tck, u = interpolate.splprep([x, y], per=True, s=l // 10)
+                    xi, yi = interpolate.splev(np.linspace(0, 1, 5 * l), tck)
+
+                    contour = list(zip(xi,yi))
                     image_position_patient = self.get_dicom_value('ImagePositionPatient', index)
                     mask_coordinates = []
                     for coord in contour:
