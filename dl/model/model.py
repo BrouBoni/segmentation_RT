@@ -174,8 +174,6 @@ class Model(object):
                     mask = mask.cuda()
                     self.w_lambda = self.w_lambda.cuda()
 
-                tensorbard_writer.add_graph(self.netG, ct)
-
                 if self.monitor_grad_norm:
                     losses, visuals, grad_norms = self.train_instance(ct, mask)
                 else:

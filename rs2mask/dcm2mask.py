@@ -88,12 +88,14 @@ class Dataset:
         # ToDo apply affine transform
         image = np.fliplr(np.rot90(np.asarray(image), 3))
 
-        if name == 'ct':
-            image = image + 1024
-
         save_path = os.path.join(self.path_dataset, patient_id, name)
         os.makedirs(save_path, exist_ok=True)
-        save_image(image, save_path)
+
+        if name == 'ct':
+            image = image + 1024
+            save_image(image, save_path, bitdepth=16)
+        else:
+            save_image(image, save_path)
 
     def make_png(self):
         """Create mask for each structure for all patients."""
