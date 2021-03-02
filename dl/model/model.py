@@ -8,7 +8,6 @@ import numpy as np
 import torch
 import torchvision.utils as vutils
 from torch.autograd import Variable
-from torch.nn.functional import binary_cross_entropy
 from torch.nn.functional import l1_loss
 from torch.utils.tensorboard import SummaryWriter
 
@@ -71,7 +70,7 @@ class Model(object):
     def __init__(self, expr_dir, seed=None, gpu_ids='0', batch_size=None,
                  epoch_count=1, niter=100, niter_decay=100, beta1=0.5, lr=0.0002,
                  ngf=64, n_blocks=9, input_nc=1, output_nc=1, use_dropout=False, norm='batch', max_grad_norm=500.,
-                 monitor_grad_norm=True, save_epoch_freq=5, print_freq=1000, display_freq=10000, testing=False):
+                 monitor_grad_norm=True, save_epoch_freq=5, print_freq=1000, display_freq=1000, testing=False):
 
         self.expr_dir = expr_dir
         self.seed = seed
@@ -92,7 +91,7 @@ class Model(object):
         self.use_dropout = use_dropout
         self.norm = norm
         self.max_grad_norm = max_grad_norm
-        self.w_lambda = torch.tensor(1, dtype=torch.float)
+        self.w_lambda = torch.tensor(10, dtype=torch.float)
 
         self.monitor_grad_norm = monitor_grad_norm
         self.save_epoch_freq = save_epoch_freq
@@ -114,7 +113,7 @@ class Model(object):
                                             lr=self.lr, betas=(self.beta1, 0.999))
 
         # define criterion
-        self.criterion = binary_cross_entropy
+        self.criterion = torch.nn.BCELoss()
 
         if not os.path.exists(expr_dir):
             os.makedirs(expr_dir)
@@ -186,7 +185,7 @@ class Model(object):
                 if total_steps % self.print_freq == 0:
                     t = (time.time() - print_start_time) / self.batch_size
                     print_log(out_f, format_log(epoch, epoch_iter, losses, t))
-                    tensorbard_writer.add_scalars('training losses', {'Loss': losses['Loss']}, total_steps)
+                    tensorbard_writer.add_scalars('losses', {'Loss': losses['Loss']}, total_steps)
                     print_start_time = time.time()
 
             if epoch % self.save_epoch_freq == 0:
@@ -221,9 +220,11 @@ class Model(object):
         :return: losses and visualization data.
         """
         fake_segmentation = self.netG.forward(ct)
-        loss = self.w_lambda * self.criterion(fake_segmentation, segmentation)
 
         self.optimizer_G.zero_grad()
+
+        loss = self.w_lambda * self.criterion(fake_segmentation, segmentation)
+
         loss.backward()
         grad_norm = torch.nn.utils.clip_grad_norm_(self.netG.parameters(), self.max_grad_norm)
         self.optimizer_G.step()
@@ -293,6 +294,8 @@ class Model(object):
         :type index: float
         """
         visuals['ct'] = (visuals['ct'] + 1.) * 1250.
+        visuals['segmentation_mask'] = visuals['segmentation_mask'] * 1250.
+        visuals['fake_segmentation_mask'] = visuals['fake_segmentation_mask'] * 1250.
         size = visuals['ct'].size()
 
         images = [img.cpu().unsqueeze(1) for img in visuals.values()]

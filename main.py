@@ -8,15 +8,15 @@ from rs2mask.dcm2mask import Dataset
 if __name__ == '__main__':
 
     # dataset
-    mask_name = "Parotide D"
-    dataset = Dataset('data/XL', 'XL_data', [mask_name])
-    # # dataset.make_png()
-    # dataset.sort_dataset(ratio=0.9, export_path='datasets', structure=mask_name)
+    mask_name = "Trachee"
+    dataset = Dataset('data/XL', 'XL_data_trachee', [mask_name])
+    dataset.make_png()
+    dataset.sort_dataset(ratio=0.9, export_path='datasets', structure=mask_name)
 
     # training
     # root_training = 'datasets/XL_data/'
     # checkpoints_dir = 'checkpoints/'
-    # name = 'seg_trachee'
+    # name = 'seg_parotide_d'
     # expr_dir = os.path.join(checkpoints_dir, name)
     # train_data_loader = DataLoader(root_training, mask_name, subset='training', batch_size=4, crop_size=256,
     #                                drop_last=True, num_workers=2)
