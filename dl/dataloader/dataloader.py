@@ -82,7 +82,8 @@ class AlignedDataset(data.Dataset):
         ct_img = Image.open(ct_path).convert('I')
         mask_img = Image.open(mask_path).convert('I')
 
-        transform = get_transform(self.load_size, self.crop_size, self.flip)
+        parameters = get_transform_parameters(self.load_size, self.crop_size, self.flip)
+        transform = get_transform(parameters)
 
         ct_img = transform(ct_img)
         ct_img = torch.as_tensor(np.array(ct_img, dtype=np.float32, copy=False))
@@ -127,7 +128,8 @@ class SingleDataset(data.Dataset):
 
         ct_img = Image.open(ct_path).convert('I')
 
-        transform = get_transform(self.load_size, self.load_size, False)
+        parameters = get_transform_parameters(self.load_size, self.load_size, False)
+        transform = get_transform(parameters)
 
         ct_img = transform(ct_img)
         ct_torch = torch.from_numpy(np.array(ct_img, dtype=np.float32))
@@ -200,13 +202,39 @@ class DataLoader(object):
         return self.dataloader
 
 
-def get_transform(load_size, crop_size, flip):
-    transform_list = [transforms.Resize(load_size, Image.NEAREST)]
+def get_transform_parameters(load_size, crop_size, flip):
+    """Parameters for data augmentation.
+    :param crop_size: Crop size.
+    :type crop_size: int
+    :param load_size: Image rescaling.
+    :type load_size: int
+    :param flip: Flip or not
+    :type flip: bool
+    :return: Crop position and flip.
+    :rtype: dict[int, int, (int, int), bool]
+    """
+    new_h = new_w = load_size
 
-    if load_size != crop_size:
-        transform_list.append(transforms.RandomCrop(crop_size))
+    x = random.randint(0, np.maximum(0, new_w - crop_size))
+    y = random.randint(0, np.maximum(0, new_h - crop_size))
+
     if flip:
-        transform_list.append(transforms.RandomHorizontalFlip())
+        flip = random.random() > 0.5
+    else:
+        flip = False
+
+    return {'load_size': load_size, 'crop_size': crop_size, 'crop_position': (x, y), 'flip': flip}
+
+
+# noinspection PyTypeChecker
+def get_transform(parameters):
+    transform_list = [transforms.Resize([parameters['load_size'], parameters['load_size']], Image.NEAREST)]
+
+    if parameters['load_size'] != parameters['crop_size']:
+        transform_list.append(transforms.Lambda(lambda img:
+                                                __crop(img, parameters['crop_position'], parameters['crop_size'])))
+        transform_list.append(transforms.Lambda(lambda img:
+                                                __flip(img, parameters['flip'])))
 
     return transforms.Compose(transform_list)
 
@@ -228,3 +256,36 @@ def make_dataset(directory):
             images.append(path)
 
     return images
+
+
+def __crop(image, position, size):
+    """Return a cropped image.
+    :param image: an image.
+    :type image: :class:`Image`
+    :param position: origin (x, y).
+    :type position: (int, int)
+    :param size: desired size.
+    :type size: int
+    :return: Image cropped.
+    :rtype: :class:`Image`
+    """
+    ow, oh = image.size
+    x1, y1 = position
+    tw = th = size
+    if ow > tw or oh > th:
+        return image.crop((x1, y1, x1 + tw, y1 + th))
+    return image
+
+
+def __flip(image, flip):
+    """Return a flipped or not image.
+    :param image: an image.
+    :type image: :class:`Image`
+    :param flip: flip or not.
+    :type flip: bool
+    :return: image flipped or not.
+    :rtype: :class:`Image`
+    """
+    if flip:
+        return image.transpose(Image.FLIP_LEFT_RIGHT)
+    return image
