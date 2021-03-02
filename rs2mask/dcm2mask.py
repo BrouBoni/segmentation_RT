@@ -123,7 +123,7 @@ class Dataset:
         print(f"Export done")
 
     def sort_dataset(self, structure, export_path, ratio=0.8):
-        """Create a dataset
+        """Creates a dataset. Takes only ct slices for which a mask is available
 
         :param structure: selected structure.
         :type structure: str
@@ -159,11 +159,10 @@ class Dataset:
         print(f"train = {train_patient}\ntest = {test_patient} \n")
 
         for train, patient in zip(mask, patients):
+            slices = os.listdir(os.path.join(path_dataset, patient, structure))
             for folder in folders:
-                file_path = os.path.join(path_dataset, patient, folder)
-                file_paths = listdir_full_path(file_path)
-                file_names = os.listdir(file_path)
-                for file_name, file_path in zip(file_names, file_paths):
+                file_paths = [os.path.join(path_dataset, patient, folder, name) for name in slices]
+                for file_name, file_path in zip(slices, file_paths):
                     if train:
                         file_destination = os.path.join(path_out, "train", folder, str(file_name))
                     else:
