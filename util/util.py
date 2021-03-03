@@ -69,9 +69,10 @@ def listdir_full_path(path):
     return [os.path.join(path, f) for f in os.listdir(path)]
 
 
-def save_image(image, path, width= 10, start=None, end=None):
-    """
+def save_image(image, path, width=10,start=None, end=None):
+    """ bitdepth=8,
 
+    :param bitdepth: encoding.
     :param image: 3D npy array
     :param path: output folder (str)
     :param width : number of kept slices before the first and after the last non empty slices
@@ -82,15 +83,15 @@ def save_image(image, path, width= 10, start=None, end=None):
         slicer = range(start, end)
     else:
         n_slices = image.shape[2]
-        non_zeros = [s for s in range(n_slices) if np.count_nonzero(image[:,:,s])]
+        non_zeros = [s for s in range(n_slices) if np.count_nonzero(image[:, :, s])]
 
         start = non_zeros[0] - width
-        if start < 0 :
+        if start < 0:
             start = 0
         end = non_zeros[-1] + width
-        if end > n_slices :
+        if end > n_slices:
             end = n_slices
-        slicer = np.arange(start,end,1)
+        slicer = np.arange(start, end, 1)
 
     ipp = os.path.basename(os.path.dirname(path))
     for i in slicer:
