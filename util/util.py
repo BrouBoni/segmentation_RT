@@ -69,7 +69,7 @@ def listdir_full_path(path):
     return [os.path.join(path, f) for f in os.listdir(path)]
 
 
-def save_image(image, path, width=10,start=None, end=None):
+def save_image(image, path, width=10, bitdepth=8, start=None, end=None):
     """ bitdepth=8,
 
     :param bitdepth: encoding.

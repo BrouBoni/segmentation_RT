@@ -8,13 +8,13 @@ from rs2mask.dcm2mask import Dataset
 if __name__ == '__main__':
 
     # dataset
-    mask_name = "Trachee"
-    dataset = Dataset('data/XL', 'XL_data_trachee', [mask_name])
-    dataset.make_png()
-    dataset.sort_dataset(ratio=0.9, export_path='datasets', structure=mask_name)
+    mask_name = "Parotide D"
+    # dataset = Dataset('data/XL', 'XL_data_trachee', [mask_name])
+    # dataset.make_png()
+    # dataset.sort_dataset(ratio=0.9, export_path='datasets', structure=mask_name)
 
     # training
-    # root_training = 'datasets/XL_data/'
+    # root_training = 'datasets/XL_data_trachee/'
     # checkpoints_dir = 'checkpoints/'
     # name = 'seg_parotide_d'
     # expr_dir = os.path.join(checkpoints_dir, name)
@@ -29,7 +29,7 @@ if __name__ == '__main__':
 
     # testing
     # expr_dir = os.path.join(checkpoints_dir, name)
-    # model = Model(expr_dir, n_blocks=1)
+    # model = Model(expr_dir, n_blocks=9)
     # root_prediction = 'prediction/ct/'
     # pred_data_loader = DataLoader(root_prediction, mask_name, subset='prediction', batch_size=1, drop_last=True)
     # pred_dataset = pred_data_loader.load_data()
