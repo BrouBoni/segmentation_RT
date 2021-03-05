@@ -13,10 +13,10 @@ from scipy import interpolate
 
 class Mask:
     """
-    Class that hold any mask aligned with a reference CT.
+    Class that hold any structures aligned with a reference CT.
 
     :param string path:
-        Root directory which includes a mask folder.
+        Root directory which includes a structures folder.
 
     :param List[pydicom.dataset.FileDataset] ds_cts:
         CT Dataset.
@@ -104,9 +104,9 @@ class Mask:
         return px, py, pz
 
     def coordinates(self, mask_name):
-        """Give the coordinates of the corresponding mask in the RCS and the SOP Instance UID.
+        """Give the coordinates of the corresponding structures in the RCS and the SOP Instance UID.
 
-        :param mask_name: name of the mask.
+        :param mask_name: name of the structures.
         :type mask_name: str
         :return: List of ROI contour sequence.
         :rtype: list[(str,list[int])]

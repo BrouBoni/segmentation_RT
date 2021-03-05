@@ -16,18 +16,19 @@ class Dataset:
     :param string path:
         Root directory.
 
-    :param string name:
-        Name of the dataset.
+    :param string export_path:
+        Export path.
 
     :param List[string] structures:
         List of desired structure(s).
 
     """
 
-    def __init__(self, path, name, structures):
+    def __init__(self, path, export_path, structures):
         self.path = path
+        self.export_path = export_path
         self.structures = structures
-        self.dataset_name = name
+        self.dataset_name = os.path.basename(export_path)
 
         self.root_path = os.path.dirname(self.path)
         self.patients = [folder for folder in os.listdir(self.path) if
@@ -97,75 +98,24 @@ class Dataset:
         else:
             save_image(image, save_path)
 
-    def make_png(self):
-        """Create mask for each structure for all patients."""
+    def make(self):
+        """Create structures for each structure for all patients."""
         print(f"Structure(s) to export: {self.structures}")
         print(f"Patient(s) identification : {self.patients}")
 
         for index, path_patient in enumerate(self.patient_paths):
             patient_id = self.patients[index]
             print(f"Exporting {index + 1} ({patient_id}) on {len(self.patients)}")
-            nii_output = os.path.join(path_patient, "output")
 
+            nii_output = os.path.join(self.export_path, patient_id)
             _, not_missing = self.find_structures(index)
             dcmrtstruct2nii(self.rs_paths[index], path_patient, nii_output, not_missing, False, mask_foreground_value=1)
 
-            nii_maks = [nii_mask for nii_mask in os.listdir(nii_output) if nii_mask.startswith('mask')]
+            nii_maks = [nii_mask for nii_mask in os.listdir(nii_output) if nii_mask.startswith('structures')]
             for nii in nii_maks:
-                nii_object = nib.load(os.path.join(nii_output, nii))
                 name = os.path.splitext(nii)[0].split("_")[1].replace("-", " ")
-                self.nii_to_png(name, nii_object, patient_id)
+                os.rename(os.path.join(nii_output, nii), os.path.join(nii_output, name+'.nii'))
 
-            ct_nii_object = nib.load(os.path.join(nii_output, "image.nii"))
-            self.nii_to_png("ct", ct_nii_object, patient_id)
+            os.rename(os.path.join(nii_output, "image.nii"), os.path.join(nii_output, "ct.nii"))
 
-            shutil.rmtree(nii_output)
         print(f"Export done")
-
-    def sort_dataset(self, structure, export_path, ratio=0.8):
-        """Creates a dataset. Takes only ct slices for which a mask is available
-
-        :param structure: selected structure.
-        :type structure: str
-        :param export_path: export path.
-        :type export_path: str
-        :param ratio: ration train/test set.
-        :type ratio: float
-        """
-        path_dataset = self.path_dataset
-        path_out = os.path.join(export_path, self.dataset_name)
-        print(f"Making {structure} dataset at {path_out}")
-
-        folders = [structure, 'ct']
-        for folder in folders:
-            os.makedirs(os.path.join(path_out, "train", folder), exist_ok=True)
-            os.makedirs(os.path.join(path_out, "test", folder), exist_ok=True)
-
-        patients = [patient for patient in os.listdir(path_dataset) if not patient.startswith('.')]
-        patients = np.array([patient for patient in patients if not os.path.exists(os.path.join(patient, structure))])
-
-        # Setup for random choice
-        n_patients = len(patients)
-        n_patients_train = round(n_patients * ratio)
-
-        #  random choice of which patient goes to train and which one goes to test
-        mask = [False] * (n_patients - n_patients_train) + [True] * n_patients_train
-        random.shuffle(mask)
-        mask = np.array(mask)
-
-        train_patient = patients[mask]
-        test_patient = patients[~mask]
-
-        print(f"train = {train_patient}\ntest = {test_patient} \n")
-
-        for train, patient in zip(mask, patients):
-            slices = os.listdir(os.path.join(path_dataset, patient, structure))
-            for folder in folders:
-                file_paths = [os.path.join(path_dataset, patient, folder, name) for name in slices]
-                for file_name, file_path in zip(slices, file_paths):
-                    if train:
-                        file_destination = os.path.join(path_out, "train", folder, str(file_name))
-                    else:
-                        file_destination = os.path.join(path_out, "test", folder, str(file_name))
-
-                    shutil.copyfile(file_path, file_destination)

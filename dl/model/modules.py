@@ -18,15 +18,15 @@ def build_conv_block(dim, norm_layer, use_dropout, use_bias):
     :rtype: :class:`nn.Sequential`
     """
     conv_block = []
-    conv_block += [nn.ReplicationPad2d(1)]
-    conv_block += [nn.Conv2d(dim, dim, kernel_size=3, bias=use_bias)]
+    conv_block += [nn.ReplicationPad3d(1)]
+    conv_block += [nn.Conv3d(dim, dim, kernel_size=3, bias=use_bias)]
     conv_block += [nn.ReLU(True)]
 
     if use_dropout:
         conv_block += [nn.Dropout(0.5)]
 
-    conv_block += [nn.ReplicationPad2d(1)]
-    conv_block += [nn.Conv2d(dim, dim, kernel_size=3, bias=use_bias)]
+    conv_block += [nn.ReplicationPad3d(1)]
+    conv_block += [nn.Conv3d(dim, dim, kernel_size=3, bias=use_bias)]
     conv_block += [norm_layer(dim)]
 
     return nn.Sequential(*conv_block)
@@ -53,31 +53,25 @@ class ResnetGenerator(nn.Module):
     :param bool use_dropout:
         if use dropout layers.
 
-    :param list[int] gpu_ids:
-        gpu id.
     """
 
     def __init__(self, input_nc, output_nc, ngf=64, n_blocks=9,
-                 norm_layer=functools.partial(nn.BatchNorm2d, affine=True),
-                 use_dropout=False, gpu_ids=None):
+                 norm_layer=functools.partial(nn.BatchNorm3d, affine=True),
+                 use_dropout=False):
 
-        if gpu_ids is None:
-            gpu_ids = []
-        assert (n_blocks >= 0)
         super(ResnetGenerator, self).__init__()
-        self.gpu_ids = gpu_ids
 
         model = [
-            nn.ReflectionPad2d(3),
-            nn.Conv2d(input_nc, ngf, kernel_size=7, padding=0, stride=1, bias=True),
+            nn.ReplicationPad3d(3),
+            nn.Conv3d(input_nc, ngf, kernel_size=7, padding=0, stride=1, bias=True),
             norm_layer(ngf),
             nn.ReLU(True),
 
-            nn.Conv2d(ngf, 2 * ngf, kernel_size=3, padding=1, stride=1, bias=True),
+            nn.Conv3d(ngf, 2 * ngf, kernel_size=3, padding=1, stride=1, bias=True),
             norm_layer(2 * ngf),
             nn.ReLU(True),
 
-            nn.Conv2d(2 * ngf, 4 * ngf, kernel_size=3, padding=1, stride=2, bias=True),
+            nn.Conv3d(2 * ngf, 4 * ngf, kernel_size=3, padding=1, stride=2, bias=True),
             norm_layer(4 * ngf),
             nn.ReLU(True),
         ]
@@ -88,18 +82,18 @@ class ResnetGenerator(nn.Module):
 
         model += [
 
-            nn.ConvTranspose2d(4 * ngf, 2 * ngf,
+            nn.ConvTranspose3d(4 * ngf, 2 * ngf,
                                kernel_size=3, stride=2,
                                padding=1, output_padding=1,
                                bias=True),
             norm_layer(2 * ngf),
             nn.ReLU(True),
 
-            nn.Conv2d(2 * ngf, ngf, kernel_size=3, padding=1, bias=True),
+            nn.Conv3d(2 * ngf, ngf, kernel_size=3, padding=1, bias=True),
             norm_layer(ngf),
             nn.ReLU(True),
 
-            nn.Conv2d(ngf, output_nc, kernel_size=7, padding=3),
+            nn.Conv3d(ngf, output_nc, kernel_size=7, padding=3),
             nn.Sigmoid()
         ]
 
@@ -107,10 +101,7 @@ class ResnetGenerator(nn.Module):
 
     def forward(self, x):
         """Standard forward"""
-        if len(self.gpu_ids) > 1:
-            return nn.parallel.data_parallel(self.model, x, self.gpu_ids)
-        else:
-            return self.model(x)
+        return self.model(x)
 
     def __str__(self):
         return "ResnetGenerator"

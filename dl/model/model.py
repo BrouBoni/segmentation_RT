@@ -3,6 +3,7 @@ import random
 import time
 from collections import OrderedDict
 from datetime import datetime
+import torchio as tio
 
 import numpy as np
 import torch
@@ -12,7 +13,7 @@ from torch.nn.functional import l1_loss
 from torch.utils.tensorboard import SummaryWriter
 
 import dl.model.networks as networks
-from util.util import print_log, format_log, parse_gpu_ids, save_png
+from util.util import print_log, format_log, save_png
 
 
 class Model(object):
@@ -25,8 +26,6 @@ class Model(object):
     :type expr_dir: str
     :param seed: manual seed.
     :type seed: int
-    :param gpu_ids: gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU.
-    :type gpu_ids:
     :param batch_size: input batch size.
     :type batch_size: int
     :param epoch_count: the starting epoch count.
@@ -67,14 +66,15 @@ class Model(object):
     :type testing: bool
     """
 
-    def __init__(self, expr_dir, seed=None, gpu_ids='0', batch_size=None,
+    def __init__(self, expr_dir, structures, seed=None, batch_size=None,
                  epoch_count=1, niter=100, niter_decay=100, beta1=0.5, lr=0.0002,
                  ngf=64, n_blocks=9, input_nc=1, output_nc=1, use_dropout=False, norm='batch', max_grad_norm=500.,
                  monitor_grad_norm=True, save_epoch_freq=5, print_freq=1000, display_freq=1000, testing=False):
 
         self.expr_dir = expr_dir
+        self.structures = structures
         self.seed = seed
-        self.gpu_ids = parse_gpu_ids(gpu_ids)
+        self.device = torch.device('cuda') if torch.cuda.is_available() else 'cpu'
         self.batch_size = batch_size
 
         self.epoch_count = epoch_count
@@ -87,11 +87,11 @@ class Model(object):
         self.ngf = ngf
         self.n_blocks = n_blocks
         self.input_nc = input_nc
-        self.output_nc = output_nc
+        self.output_nc = len(structures)
         self.use_dropout = use_dropout
         self.norm = norm
         self.max_grad_norm = max_grad_norm
-        self.w_lambda = torch.tensor(10, dtype=torch.float)
+        self.w_lambda = torch.tensor(10, dtype=torch.float).to(self.device)
 
         self.monitor_grad_norm = monitor_grad_norm
         self.save_epoch_freq = save_epoch_freq
@@ -99,14 +99,10 @@ class Model(object):
         self.display_freq = display_freq
         self.time = datetime.now().strftime("%Y%m%d-%H%M%S")
 
-        # Set gpu ids
-        if len(self.gpu_ids) > 0:
-            torch.cuda.set_device(self.gpu_ids[0])
-
         # define network we need here
         self.netG = networks.define_generator(input_nc=self.input_nc, output_nc=self.output_nc, ngf=self.ngf,
                                               n_blocks=self.n_blocks, use_dropout=self.use_dropout,
-                                              gpu_ids=self.gpu_ids)
+                                              device=self.device)
 
         # define all optimizers here
         self.optimizer_G = torch.optim.Adam(self.netG.parameters(),
@@ -142,7 +138,7 @@ class Model(object):
         self.batch_size = train_dataset.batch_size
         self.save_options()
         out_f = open(f"{self.expr_dir}/results.txt", 'w')
-        use_gpu = len(self.gpu_ids) > 0
+        use_gpu = torch.cuda.is_available()
 
         tensorbard_writer = SummaryWriter(os.path.join(self.expr_dir, 'TensorBoard', self.time))
 
@@ -162,16 +158,11 @@ class Model(object):
             epoch_iter = 0
 
             for i, data in enumerate(train_dataset):
-                ct = Variable(data['ct'])
-                mask = Variable(data['mask'])
+                ct = data['ct'][tio.DATA].to(self.device)
+                mask = torch.cat([data[structure][tio.DATA] for structure in self.structures], dim=1).to(self.device)
 
                 total_steps += self.batch_size
                 epoch_iter += self.batch_size
-
-                if use_gpu:
-                    ct = ct.cuda()
-                    mask = mask.cuda()
-                    self.w_lambda = self.w_lambda.cuda()
 
                 if self.monitor_grad_norm:
                     losses, visuals, grad_norms = self.train_instance(ct, mask)
@@ -223,7 +214,7 @@ class Model(object):
 
         self.optimizer_G.zero_grad()
 
-        loss = self.w_lambda * self.criterion(fake_segmentation, segmentation)
+        loss = self.w_lambda * self.criterion(fake_segmentation, segmentation.float())
 
         loss.backward()
         grad_norm = torch.nn.utils.clip_grad_norm_(self.netG.parameters(), self.max_grad_norm)
@@ -329,10 +320,8 @@ class Model(object):
         """
         mae = []
         for batch in dataset:
-            ct, mask = Variable(batch['ct']), Variable(batch['mask'])
-            if use_gpu:
-                ct = ct.cuda()
-                mask = mask.cuda()
+            ct = batch['ct'][tio.DATA].to(self.device)
+            mask = torch.cat([batch[structure][tio.DATA] for structure in self.structures], dim=1).to(self.device)
 
             fake_mask = self.netG.forward(ct)
             mae.append(l1_loss(mask, fake_mask.data).item())
@@ -354,7 +343,7 @@ class Model(object):
         self.load(checkpoint)
         self.eval()
 
-        prediction_path = export_path or os.path.join(self.expr_dir, f"prediction_{dataset.dataset.mask}")
+        prediction_path = export_path or os.path.join(self.expr_dir, f"prediction_{dataset.dataset.structures}")
         if not os.path.exists(prediction_path):
             os.makedirs(prediction_path)
 

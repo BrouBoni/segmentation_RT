@@ -1,4 +1,6 @@
 import os
+import random
+import shutil
 
 import numpy as np
 import png
@@ -152,3 +154,52 @@ def parse_opt_file(opt_path):
             k, v = line.split(':')
             opt[k.strip()] = parse_val(v.strip())
     return opt
+
+
+def sort_dataset(path, export_path, structures, ratio=0.8):
+    """Creates a dataset. Takes only ct slices for which a structures is available
+
+    :param structures: List of structure.
+    :type structures: List[str]
+    :param path: root directory.
+    :type path: str
+    :param export_path: export path.
+    :type export_path: str
+    :param ratio: ration train/test set.
+    :type ratio: float
+    """
+    print(f"Sorting dataset at {export_path}")
+
+    structures.append('ct')
+    niis = structures.copy()
+    for nii in niis:
+        os.makedirs(os.path.join(export_path, "train", nii), exist_ok=True)
+        os.makedirs(os.path.join(export_path, "test", nii), exist_ok=True)
+
+    patients = [patient for patient in os.listdir(path) if not patient.startswith('.')]
+    patients = np.array(patients)
+
+    # Setup for random choice
+    n_patients = len(patients)
+    n_patients_train = round(n_patients * ratio)
+
+    #  random choice of which patient goes to train and which one goes to test
+    mask = [False] * (n_patients - n_patients_train) + [True] * n_patients_train
+    random.shuffle(mask)
+    mask = np.array(mask)
+
+    train_patient = patients[mask]
+    test_patient = patients[~mask]
+
+    print(f"train = {train_patient}\ntest = {test_patient} \n")
+
+    for train, patient in zip(mask, patients):
+        for nii in niis:
+            file_path = os.path.join(path, patient, nii+'.nii')
+            file_export_name = nii+"_"+patient+".nii"
+            if train:
+                file_destination = os.path.join(export_path, "train", nii, file_export_name)
+            else:
+                file_destination = os.path.join(export_path, "test", nii, file_export_name)
+
+            shutil.copyfile(file_path, file_destination)

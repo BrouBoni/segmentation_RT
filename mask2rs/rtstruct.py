@@ -22,7 +22,7 @@ class RTStruct:
     Class that builds a RT structure :class:`pydicom.dataset.Dataset`.
 
     :param string path:
-        Root directory which includes a mask folder.
+        Root directory which includes a structures folder.
     """
 
     def __init__(self, path):
@@ -149,7 +149,7 @@ class RTStruct:
         :type structure: dict[str, str]
         :param index: index of the structure.
         :type index: int
-        :param coordinates: coordinates of the corresponding mask in theRCS and the SOP Instance UID`
+        :param coordinates: coordinates of the corresponding structures in theRCS and the SOP Instance UID`
             associated for each slice.
         :type coordinates: list[(str,list[int])]
         """
@@ -180,7 +180,7 @@ class RTStruct:
         :type structure: dict[str, str]
         :param index: index of the structure.
         :type index: int
-        :param coordinates: coordinates of the corresponding mask in theRCS and the SOP Instance UID`
+        :param coordinates: coordinates of the corresponding structures in theRCS and the SOP Instance UID`
             associated for each slice.
         :type coordinates: list[(str,list[int])]
         """

@@ -1,6 +1,6 @@
 import os
 
-from dl.dataloader.dataloader import DataLoader
+from dl.dataloader.dataloader import DatasetPatch
 from dl.model.model import Model
 # from mask2rs.rtstruct import RTStruct
 from rs2mask.dcm2mask import Dataset
@@ -8,30 +8,28 @@ from rs2mask.dcm2mask import Dataset
 if __name__ == '__main__':
 
     # dataset
-    mask_name = "Parotide D"
-    # dataset = Dataset('data/XL', 'XL_data_trachee', [mask_name])
-    # dataset.make_png()
-    # dataset.sort_dataset(ratio=0.9, export_path='datasets', structure=mask_name)
+    structures = ["Parotide D", "Parotide G", "Trachee"]
+    # dataset = Dataset('data/XL', 'data/XL_3D', structures)
+    # dataset.make()
+    # sort_dataset('data/XL_3D', 'datasets/XL_3D_dataset', structures, 0.9)
 
     # training
-    # root_training = 'datasets/XL_data_trachee/'
-    # checkpoints_dir = 'checkpoints/'
-    # name = 'seg_parotide_d'
-    # expr_dir = os.path.join(checkpoints_dir, name)
-    # train_data_loader = DataLoader(root_training, mask_name, subset='training', batch_size=4, crop_size=256,
-    #                                drop_last=True, num_workers=2)
-    # train_dataset = train_data_loader.load_data()
-    # test_data_loader = DataLoader(root_training, mask_name, subset='testing', batch_size=1, drop_last=True,
-    #                               num_workers=2)
-    # test_dataset = test_data_loader.load_data()
-    # model = Model(expr_dir, n_blocks=9, niter=100, niter_decay=100)
-    # model.train(train_dataset, test_dataset)
+    root_training = 'data/XL_3D/'
+    checkpoints_dir = 'checkpoints/'
+    name = 'seg_3D'
+    expr_dir = os.path.join(checkpoints_dir, name)
+
+    dataset = DatasetPatch(root_training, structures, 0.9, batch_size=1, num_worker=2)
+    training_loader_patches, validation_loader_patches = dataset.get_loaders()
+
+    model = Model(expr_dir, structures, n_blocks=1, niter=100, niter_decay=100)
+    model.train(training_loader_patches, validation_loader_patches)
 
     # testing
     # expr_dir = os.path.join(checkpoints_dir, name)
     # model = Model(expr_dir, n_blocks=9)
     # root_prediction = 'prediction/ct/'
-    # pred_data_loader = DataLoader(root_prediction, mask_name, subset='prediction', batch_size=1, drop_last=True)
+    # pred_data_loader = DataLoader(root_prediction, structures, subset='prediction', batch_size=1, drop_last=True)
     # pred_dataset = pred_data_loader.load_data()
     # model.test(pred_dataset)
 
