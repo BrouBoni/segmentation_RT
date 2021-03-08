@@ -5,7 +5,7 @@ import torch.utils.data as data
 
 
 class DatasetPatch:
-    def __init__(self, root, structures, ratio=0.9, crop_size=(64, 64, 6),
+    def __init__(self, root, structures, ratio=0.9, crop_size=(32, 32, 6),
                  batch_size=1, num_worker=0, samples_per_volume=1, max_length=100):
         # 128, 128, 64 20
         self.root = root

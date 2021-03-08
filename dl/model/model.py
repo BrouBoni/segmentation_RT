@@ -69,7 +69,7 @@ class Model(object):
     def __init__(self, expr_dir, structures, seed=None, batch_size=None,
                  epoch_count=1, niter=100, niter_decay=100, beta1=0.5, lr=0.0002,
                  ngf=64, n_blocks=9, input_nc=1, output_nc=1, use_dropout=False, norm='batch', max_grad_norm=500.,
-                 monitor_grad_norm=True, save_epoch_freq=5, print_freq=1000, display_freq=1000, testing=False):
+                 monitor_grad_norm=True, save_epoch_freq=2, print_freq=10, display_freq=1000, testing=False):
 
         self.expr_dir = expr_dir
         self.structures = structures
