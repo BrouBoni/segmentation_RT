@@ -369,4 +369,6 @@ class Model(object):
             with torch.no_grad():
                 fake_segmentation = self.netG.forward(ct).cpu()
                 fake_segmentation = fake_segmentation.numpy()
+                fake_segmentation[fake_segmentation > 0.9] = 1
+                fake_segmentation[fake_segmentation < 0.9] = 0
                 save_png(fake_segmentation[0, 0], os.path.join(prediction_path, name))
