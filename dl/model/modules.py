@@ -94,7 +94,7 @@ class ResnetGenerator(nn.Module):
             nn.ReLU(True),
 
             nn.Conv3d(ngf, output_nc, kernel_size=7, padding=3),
-            nn.Sigmoid()
+            nn.Softmax(dim=1)
         ]
 
         self.model = nn.Sequential(*model)

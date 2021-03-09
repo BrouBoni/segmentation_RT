@@ -8,7 +8,6 @@ import torchio as tio
 import numpy as np
 import torch
 import torchvision.utils as vutils
-from torch.autograd import Variable
 from torch.nn.functional import l1_loss
 from torch.utils.tensorboard import SummaryWriter
 
@@ -44,8 +43,6 @@ class Model(object):
     :type n_blocks: int
     :param input_nc: the number of channels in input images.
     :type input_nc: int
-    :param output_nc: the number of channels in output images.
-    :type output_nc: int
     :param ngf: the number of filters in the last conv layer.
     :type ngf: int
     :param n_blocks: the number of ResNet blocks.
@@ -68,8 +65,8 @@ class Model(object):
 
     def __init__(self, expr_dir, structures, seed=None, batch_size=None,
                  epoch_count=1, niter=100, niter_decay=100, beta1=0.5, lr=0.0002,
-                 ngf=64, n_blocks=9, input_nc=1, output_nc=1, use_dropout=False, norm='batch', max_grad_norm=500.,
-                 monitor_grad_norm=True, save_epoch_freq=2, print_freq=10, display_freq=1000, testing=False):
+                 ngf=64, n_blocks=9, input_nc=1, use_dropout=False, norm='batch', max_grad_norm=500.,
+                 monitor_grad_norm=True, save_epoch_freq=5, print_freq=500, display_freq=1000, testing=False):
 
         self.expr_dir = expr_dir
         self.structures = structures
@@ -91,7 +88,6 @@ class Model(object):
         self.use_dropout = use_dropout
         self.norm = norm
         self.max_grad_norm = max_grad_norm
-        self.w_lambda = torch.tensor(10, dtype=torch.float).to(self.device)
 
         self.monitor_grad_norm = monitor_grad_norm
         self.save_epoch_freq = save_epoch_freq
@@ -105,11 +101,8 @@ class Model(object):
                                               device=self.device)
 
         # define all optimizers here
-        self.optimizer_G = torch.optim.Adam(self.netG.parameters(),
-                                            lr=self.lr, betas=(self.beta1, 0.999))
-
-        # define criterion
-        self.criterion = torch.nn.BCELoss()
+        self.optimizer_G = torch.optim.AdamW(self.netG.parameters(),
+                                             lr=self.lr, betas=(self.beta1, 0.999))
 
         if not os.path.exists(expr_dir):
             os.makedirs(expr_dir)
@@ -169,14 +162,14 @@ class Model(object):
                 else:
                     losses, visuals = self.train_instance(ct, mask)
 
-                if total_steps % self.display_freq == 0:
-                    visualize_training = self.visualize_training(visuals, epoch, epoch_iter / self.batch_size)
-                    tensorbard_writer.add_image('Training images', visualize_training, total_steps)
+                # if total_steps % self.display_freq == 0:
+                #     visualize_training = self.visualize_training(visuals, epoch, epoch_iter / self.batch_size)
+                #     tensorbard_writer.add_image('Training images', visualize_training, total_steps)
 
                 if total_steps % self.print_freq == 0:
                     t = (time.time() - print_start_time) / self.batch_size
                     print_log(out_f, format_log(epoch, epoch_iter, losses, t))
-                    tensorbard_writer.add_scalars('losses', {'Loss': losses['Loss']}, total_steps)
+                    tensorbard_writer.add_scalars('losses', {'Dice loss': losses['Loss']}, total_steps)
                     print_start_time = time.time()
 
             if epoch % self.save_epoch_freq == 0:
@@ -184,12 +177,12 @@ class Model(object):
                           (epoch, total_steps))
                 self.save('latest')
                 if test_dataset:
-                    train_mae = self.eval_mae(train_dataset)
-                    test_mae = self.eval_mae(test_dataset)
+                    train_mae = self.eval_dice(train_dataset)
+                    test_mae = self.eval_dice(test_dataset)
                     tensorbard_writer.add_scalars('accuracy', {'Train': train_mae,
                                                                'Test': test_mae}, epoch)
 
-                    print_log(out_f, 'Train MAE: %.4f, Test MAE: %.4f. \t' %
+                    print_log(out_f, 'Train Dice: %.4f, Test Dice: %.4f. \t' %
                               (train_mae, test_mae))
 
             print_log(out_f, 'End of epoch %d / %d \t Time Taken: %d sec' %
@@ -214,9 +207,10 @@ class Model(object):
 
         self.optimizer_G.zero_grad()
 
-        loss = self.w_lambda * self.criterion(fake_segmentation, segmentation.float())
-
+        losses = networks.get_dice_loss(fake_segmentation, segmentation)
+        loss = losses.mean()
         loss.backward()
+
         grad_norm = torch.nn.utils.clip_grad_norm_(self.netG.parameters(), self.max_grad_norm)
         self.optimizer_G.step()
 
@@ -308,24 +302,23 @@ class Model(object):
             print_log(options_file, '%s: %s' % (str(k), str(v)))
         print_log(options_file, '-------------- End ----------------')
 
-    def eval_mae(self, dataset, use_gpu=True):
+    def eval_dice(self, dataset):
         """Evaluation metric using MAE.
 
         :param dataset: training dataset.
         :type dataset: :class:`DataLoader`
-        :param use_gpu: if gpu.
-        :type use_gpu: bool
         :return: MAE of the dataset.
         :rtype: float
         """
-        mae = []
+        dice = []
+
         for batch in dataset:
             ct = batch['ct'][tio.DATA].to(self.device)
-            mask = torch.cat([batch[structure][tio.DATA] for structure in self.structures], dim=1).to(self.device)
+            segmentation = torch.cat([batch[structure][tio.DATA] for structure in self.structures], dim=1).to(self.device)
 
-            fake_mask = self.netG.forward(ct)
-            mae.append(l1_loss(mask, fake_mask.data).item())
-        return np.mean(mae)
+            fake_segmentation = self.netG.forward(ct)
+            dice.append(networks.get_dice_loss(fake_segmentation, segmentation).mean().data.item())
+        return np.mean(dice)
 
     def test(self, dataset, export_path=None, checkpoint=None, use_gpu=True):
         """Model prediction for a SingleDataset.

@@ -19,10 +19,10 @@ if __name__ == '__main__':
     name = 'seg_3D'
     expr_dir = os.path.join(checkpoints_dir, name)
 
-    dataset = DatasetPatch(root_training, structures, 0.9, batch_size=1, num_worker=2)
+    dataset = DatasetPatch(root_training, structures, 0.9, batch_size=2, num_worker=2)
     training_loader_patches, validation_loader_patches = dataset.get_loaders()
 
-    model = Model(expr_dir, structures, n_blocks=1, niter=100, niter_decay=100)
+    model = Model(expr_dir, structures, n_blocks=9, niter=100, niter_decay=100)
     model.train(training_loader_patches, validation_loader_patches)
 
     # testing

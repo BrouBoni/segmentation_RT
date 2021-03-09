@@ -5,9 +5,9 @@ import torch.utils.data as data
 
 
 class DatasetPatch:
-    def __init__(self, root, structures, ratio=0.9, crop_size=(32, 32, 6),
-                 batch_size=1, num_worker=0, samples_per_volume=1, max_length=100):
-        # 128, 128, 64 20
+    def __init__(self, root, structures, ratio=0.9, crop_size=(128, 128, 16),
+                 batch_size=1, num_worker=0, samples_per_volume=20, max_length=100):
+
         self.root = root
         self.structures = structures
         self.n_structures = len(structures)
@@ -17,7 +17,7 @@ class DatasetPatch:
 
         self.transform = tio.Compose([
                 tio.ToCanonical(),
-                tio.RescaleIntensity(0, (0.5, 99.5))
+                tio.RescaleIntensity(1, (0.5, 99.5))
                 ])
 
         self.subjects = get_subjects(self.root, self.structures, self.transform)
@@ -73,7 +73,7 @@ def random_split(subjects, ratio):
 def queuing(training_subjects, validation_subjects, crop_size, samples_per_volume=2,
             max_length=4, num_workers=2):
 
-    sampler = tio.data.UniformSampler(crop_size)
+    sampler = tio.data.WeightedSampler(crop_size, 'Trachee')
 
     patches_training_set = tio.Queue(
         subjects_dataset=training_subjects,
