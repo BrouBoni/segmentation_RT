@@ -73,31 +73,6 @@ class Dataset:
 
         return missing, not_missing
 
-    def nii_to_png(self, name, nii, patient_id):
-        """Convert nii file to png.
-
-        :param name: filename.
-        :type name: str
-        :param nii: nii object.
-        :type nii: :class:`nib.nifti1.Nifti1Image`
-        :param patient_id: patient identification number.
-        :type patient_id: str
-        """
-        image = nii.get_fdata(dtype=np.float32)[:]
-        # ToDo name convention
-        # name = name.lower()
-        # ToDo apply affine transform
-        image = np.fliplr(np.rot90(np.asarray(image), 3))
-
-        save_path = os.path.join(self.path_dataset, patient_id, name)
-        os.makedirs(save_path, exist_ok=True)
-
-        if name == 'ct':
-            image = image + 1024
-            save_image(image, save_path, bitdepth=16)
-        else:
-            save_image(image, save_path)
-
     def make(self):
         """Create structures for each structure for all patients."""
         print(f"Structure(s) to export: {self.structures}")
@@ -111,7 +86,7 @@ class Dataset:
             _, not_missing = self.find_structures(index)
             dcmrtstruct2nii(self.rs_paths[index], path_patient, nii_output, not_missing, False, mask_foreground_value=1)
 
-            nii_maks = [nii_mask for nii_mask in os.listdir(nii_output) if nii_mask.startswith('structures')]
+            nii_maks = [nii_mask for nii_mask in os.listdir(nii_output) if nii_mask.startswith('mask')]
             for nii in nii_maks:
                 name = os.path.splitext(nii)[0].split("_")[1].replace("-", " ")
                 os.rename(os.path.join(nii_output, nii), os.path.join(nii_output, name+'.nii'))

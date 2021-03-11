@@ -336,19 +336,23 @@ class Model(object):
         self.load(checkpoint)
         self.eval()
 
-        prediction_path = export_path or os.path.join(self.expr_dir, f"prediction_{dataset.dataset.structures}")
+        prediction_path = export_path or os.path.join(self.expr_dir, f"prediction_e")
         if not os.path.exists(prediction_path):
             os.makedirs(prediction_path)
 
-        for i, data in enumerate(dataset):
-            ct = data['ct']
-            path = data['ct_path'][0]
-            name = os.path.basename(path)
+        start = time.time()
+        with torch.no_grad():
+            for i, data in enumerate(dataset.loader):
+                ct = data['ct'][tio.DATA].to(self.device)
+                locations = data[tio.LOCATION]
 
-            if use_gpu:
-                ct = ct.cuda()
+                fake_segmentation = self.netG.forward(ct)
 
-            with torch.no_grad():
-                fake_segmentation = self.netG.forward(ct).cpu()
-                fake_segmentation = fake_segmentation.numpy()
-                save_png(fake_segmentation[0, 0], os.path.join(prediction_path, name))
+                dataset.aggregator.add_batch(fake_segmentation, locations)
+
+                print(f"{i+1}/{len(dataset.loader)}")
+            affine = dataset.subjects[0]['ct'].affine
+            foreground = dataset.aggregator.get_output_tensor()
+            prediction = tio.ScalarImage(tensor=foreground, affine=affine)
+            print(time.time()-start)
+            print("ok")

@@ -4,10 +4,35 @@ import torch
 import torch.utils.data as data
 
 
+class DatasetSingle:
+    def __init__(self, root, structures):
+        self.root = root
+        self.structures = structures
+        self.n_structures = len(structures)
+
+        self.transform = tio.Compose([
+            tio.ToCanonical(),
+            tio.RescaleIntensity(1, (0.5, 99.5))
+        ])
+
+        self.subjects = get_subjects(self.root, self.structures, self.transform)
+
+        patch_size = 256, 256, 32  # we can user larger patches for inference
+        patch_overlap = 8
+        grid_sampler = tio.inference.GridSampler(
+            self.subjects[0],
+            patch_size,
+            patch_overlap,
+        )
+
+        self.loader = torch.utils.data.DataLoader(
+            grid_sampler, batch_size=4, num_workers=4, drop_last=True)
+        self.aggregator = tio.inference.GridAggregator(grid_sampler)
+
+
 class DatasetPatch:
     def __init__(self, root, structures, ratio=0.9, crop_size=(128, 128, 16),
                  batch_size=1, num_worker=0, samples_per_volume=20, max_length=100):
-
         self.root = root
         self.structures = structures
         self.n_structures = len(structures)
@@ -16,9 +41,9 @@ class DatasetPatch:
         self.num_worker = num_worker
 
         self.transform = tio.Compose([
-                tio.ToCanonical(),
-                tio.RescaleIntensity(1, (0.5, 99.5))
-                ])
+            tio.ToCanonical(),
+            tio.RescaleIntensity(1, (1, 99.0))
+        ])
 
         self.subjects = get_subjects(self.root, self.structures, self.transform)
         self.training_subjects, self.validation_subjects = random_split(self.subjects, ratio)
@@ -33,7 +58,7 @@ class DatasetPatch:
             drop_last=True)
 
         validation_loader_patches = torch.utils.data.DataLoader(
-            self.patches_validation_set, batch_size=1,
+            self.patches_validation_set, batch_size=self.batch_size,
             drop_last=True)
 
         print('Training set:', len(self.training_subjects), 'subjects')
@@ -52,10 +77,13 @@ def get_subjects(path, structures, transform):
         subject = tio.Subject(
             ct=tio.ScalarImage(ct_path),
         )
-
-        for k, v in structures_path_dict.items():
+        label_map = torch.zeros(subject["ct"].shape)
+        for i, (k, v) in enumerate(structures_path_dict.items()):
             subject.add_image(tio.LabelMap(v), k)
+            label_map += tio.LabelMap(v).data * (i + 1)
 
+        label_map[label_map >= len(structures)] = 0
+        subject.add_image(tio.LabelMap(tensor=label_map, affine=subject["ct"].affine), 'label_map')
         subjects.append(subject)
 
     return tio.SubjectsDataset(subjects, transform=transform)
@@ -72,7 +100,6 @@ def random_split(subjects, ratio):
 
 def queuing(training_subjects, validation_subjects, crop_size, samples_per_volume=2,
             max_length=4, num_workers=2):
-
     sampler = tio.data.WeightedSampler(crop_size, 'Trachee')
 
     patches_training_set = tio.Queue(
