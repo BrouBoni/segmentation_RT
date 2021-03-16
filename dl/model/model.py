@@ -66,7 +66,7 @@ class Model(object):
     def __init__(self, expr_dir, structures, seed=None, batch_size=None,
                  epoch_count=1, niter=100, niter_decay=100, beta1=0.5, lr=0.0002,
                  ngf=64, n_blocks=9, input_nc=1, use_dropout=False, norm='batch', max_grad_norm=500.,
-                 monitor_grad_norm=True, save_epoch_freq=5, print_freq=500, display_freq=1000, testing=False):
+                 monitor_grad_norm=True, save_epoch_freq=1, print_freq=100, display_freq=1000, testing=False):
 
         self.expr_dir = expr_dir
         self.structures = structures
@@ -84,7 +84,7 @@ class Model(object):
         self.ngf = ngf
         self.n_blocks = n_blocks
         self.input_nc = input_nc
-        self.output_nc = len(structures)
+        self.output_nc = len(structures)+1
         self.use_dropout = use_dropout
         self.norm = norm
         self.max_grad_norm = max_grad_norm
@@ -152,7 +152,7 @@ class Model(object):
 
             for i, data in enumerate(train_dataset):
                 ct = data['ct'][tio.DATA].to(self.device)
-                mask = torch.cat([data[structure][tio.DATA] for structure in self.structures], dim=1).to(self.device)
+                mask = data['label_map'][tio.DATA].to(self.device)
 
                 total_steps += self.batch_size
                 epoch_iter += self.batch_size
@@ -314,7 +314,7 @@ class Model(object):
 
         for batch in dataset:
             ct = batch['ct'][tio.DATA].to(self.device)
-            segmentation = torch.cat([batch[structure][tio.DATA] for structure in self.structures], dim=1).to(self.device)
+            segmentation = batch['label_map'][tio.DATA].to(self.device)
 
             fake_segmentation = self.netG.forward(ct)
             dice.append(networks.get_dice_loss(fake_segmentation, segmentation).mean().data.item())
