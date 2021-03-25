@@ -3,15 +3,15 @@ import random
 import time
 from collections import OrderedDict
 from datetime import datetime
-import torchio as tio
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import matplotlib.pyplot as plt
+import torchio as tio
 from torch.utils.tensorboard import SummaryWriter
 
 import dl.model.networks as networks
-from util.util import print_log, format_log, save_png
+from util.util import print_log, format_log
 
 
 class Model(object):
