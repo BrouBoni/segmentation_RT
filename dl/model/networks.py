@@ -8,17 +8,19 @@ from dl.model.modules import ResnetGenerator
 
 def dice_loss(output, target):
     smooth = 1.
+    loss = 0.
+    for c in range(target.shape[1]):
+        oflat = output[:, c].contiguous().view(-1)
+        tflat = target[:, c].contiguous().view(-1)
+        intersection = (oflat * tflat).sum()
+        loss += 1. - ((2. * intersection + smooth) /
+                      (oflat.sum() + tflat.sum() + smooth))
 
-    oflat = output.view(-1)
-    tflat = target.contiguous() .view(-1)
-    intersection = (oflat * tflat).sum()
-
-    return 1 - ((2. * intersection + smooth) /
-                (oflat.sum() + tflat.sum() + smooth))
+    return loss / 4.
 
 
 def dice_score(output, target):
-    return 1-dice_loss(output, target)
+    return 1 - dice_loss(output, target)
 
 
 def weights_init(m):

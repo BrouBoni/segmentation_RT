@@ -33,7 +33,7 @@ class DatasetSingle:
 
 class DatasetPatch:
     def __init__(self, root, structures, ratio=0.9, crop_size=(384, 384, 4),
-                 batch_size=1, num_worker=2, samples_per_volume=20, max_length=100):
+                 batch_size=1, num_worker=2, samples_per_volume=20, max_length=200):
         self.root = root
         self.structures = structures
         self.n_structures = len(structures)

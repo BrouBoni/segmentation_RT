@@ -281,15 +281,16 @@ class Model(object):
         segmentation_mask = visuals['segmentation_mask'].argmax(dim=1, keepdim=True)
         fake_segmentation_mask = visuals['fake_segmentation_mask'].argmax(dim=1, keepdim=True)
 
-        subject = tio.Subject(
-            ct=tio.ScalarImage(tensor=ct[0], affine=affine[0]),
-            segmentation_mask=tio.LabelMap(tensor=segmentation_mask[0], affine=affine[0]),
-            fake_segmentation_mask=tio.LabelMap(tensor=fake_segmentation_mask[0], affine=affine[0])
-        )
+        for i in range(ct.shape[0]):
+            subject = tio.Subject(
+                ct=tio.ScalarImage(tensor=ct[i], affine=affine[i]),
+                segmentation_mask=tio.LabelMap(tensor=segmentation_mask[i], affine=affine[i]),
+                fake_segmentation_mask=tio.LabelMap(tensor=fake_segmentation_mask[i], affine=affine[i])
+            )
 
-        save_path = os.path.join(self.expr_dir, "training_visuals")
-        save_path = os.path.join(save_path, 'cycle_%02d_%04d.png' % (epoch, index))
-        subject.plot(show=False, output_path=save_path)
+            save_path = os.path.join(self.expr_dir, "training_visuals")
+            save_path = os.path.join(save_path, 'cycle_%02d_%04d_%02d.png' % (epoch, index, i))
+            subject.plot(show=False, output_path=save_path)
         plt.close('all')
 
     def save_options(self):
