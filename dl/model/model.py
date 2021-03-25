@@ -7,8 +7,7 @@ import torchio as tio
 
 import numpy as np
 import torch
-import torchvision.utils as vutils
-import torch.nn as nn
+import matplotlib.pyplot as plt
 from torch.utils.tensorboard import SummaryWriter
 
 import dl.model.networks as networks
@@ -291,6 +290,7 @@ class Model(object):
         save_path = os.path.join(self.expr_dir, "training_visuals")
         save_path = os.path.join(save_path, 'cycle_%02d_%04d.png' % (epoch, index))
         subject.plot(show=False, output_path=save_path)
+        plt.close('all')
 
     def save_options(self):
         """Save model options."""
