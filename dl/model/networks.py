@@ -5,26 +5,20 @@ import torch.nn as nn
 
 from dl.model.modules import ResnetGenerator
 
-CHANNELS_DIMENSION = 1
-SPATIAL_DIMENSIONS = 2, 3, 4
+
+def dice_loss(output, target):
+    smooth = 1.
+
+    oflat = output.view(-1)
+    tflat = target.contiguous() .view(-1)
+    intersection = (oflat * tflat).sum()
+
+    return 1 - ((2. * intersection + smooth) /
+                (oflat.sum() + tflat.sum() + smooth))
 
 
-def get_dice_score(output, target, epsilon=1e-9):
-    p0 = output
-    g0 = target
-    p1 = 1 - p0
-    g1 = 1 - g0
-    tp = (p0 * g0).sum(dim=SPATIAL_DIMENSIONS)
-    fp = (p0 * g1).sum(dim=SPATIAL_DIMENSIONS)
-    fn = (p1 * g0).sum(dim=SPATIAL_DIMENSIONS)
-    num = 2 * tp
-    denom = 2 * tp + fp + fn + epsilon
-    dice_score = num / denom
-    return dice_score
-
-
-def get_dice_loss(output, target):
-    return 1 - get_dice_score(output, target)
+def dice_score(output, target):
+    return 1-dice_loss(output, target)
 
 
 def weights_init(m):
@@ -50,7 +44,7 @@ def define_generator(input_nc, output_nc, ngf, n_blocks, device,
     :param input_nc: the number of channels in input images.
     :type input_nc: int
     :param output_nc: the number of channels in output images.
-    :type output_nc: int
+    :type output_nc: i
     :param ngf: the number of filters in the last conv layer.
     :type ngf: int
     :param n_blocks: the number of ResNet blocks.

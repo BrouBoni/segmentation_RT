@@ -8,7 +8,7 @@ import torchio as tio
 import numpy as np
 import torch
 import torchvision.utils as vutils
-from torch.nn.functional import l1_loss
+import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 
 import dl.model.networks as networks
@@ -64,9 +64,9 @@ class Model(object):
     """
 
     def __init__(self, expr_dir, structures, seed=None, batch_size=None,
-                 epoch_count=1, niter=100, niter_decay=100, beta1=0.5, lr=0.0002,
+                 epoch_count=1, niter=150, niter_decay=50, beta1=0.5, lr=0.0002,
                  ngf=64, n_blocks=9, input_nc=1, use_dropout=False, norm='batch', max_grad_norm=500.,
-                 monitor_grad_norm=True, save_epoch_freq=1, print_freq=100, display_freq=1000, testing=False):
+                 monitor_grad_norm=True, save_epoch_freq=2, print_freq=100, display_epoch_freq=1, testing=False):
 
         self.expr_dir = expr_dir
         self.structures = structures
@@ -84,7 +84,7 @@ class Model(object):
         self.ngf = ngf
         self.n_blocks = n_blocks
         self.input_nc = input_nc
-        self.output_nc = len(structures)+1
+        self.output_nc = len(structures) + 1
         self.use_dropout = use_dropout
         self.norm = norm
         self.max_grad_norm = max_grad_norm
@@ -92,7 +92,7 @@ class Model(object):
         self.monitor_grad_norm = monitor_grad_norm
         self.save_epoch_freq = save_epoch_freq
         self.print_freq = print_freq
-        self.display_freq = display_freq
+        self.display_epoch_freq = display_epoch_freq
         self.time = datetime.now().strftime("%Y%m%d-%H%M%S")
 
         # define network we need here
@@ -153,7 +153,8 @@ class Model(object):
             for i, data in enumerate(train_dataset):
                 ct = data['ct'][tio.DATA].to(self.device)
                 mask = data['label_map'][tio.DATA].to(self.device)
-
+                ct = ct.transpose_(2, 4)
+                mask = mask.transpose_(2, 4)
                 total_steps += self.batch_size
                 epoch_iter += self.batch_size
 
@@ -162,28 +163,28 @@ class Model(object):
                 else:
                     losses, visuals = self.train_instance(ct, mask)
 
-                # if total_steps % self.display_freq == 0:
-                #     visualize_training = self.visualize_training(visuals, epoch, epoch_iter / self.batch_size)
-                #     tensorbard_writer.add_image('Training images', visualize_training, total_steps)
-
                 if total_steps % self.print_freq == 0:
                     t = (time.time() - print_start_time) / self.batch_size
                     print_log(out_f, format_log(epoch, epoch_iter, losses, t))
                     tensorbard_writer.add_scalars('losses', {'Dice loss': losses['Loss']}, total_steps)
                     print_start_time = time.time()
 
+            if epoch % self.display_epoch_freq == 0:
+                self.visualize_training(visuals, data['ct'][tio.AFFINE], epoch, epoch_iter / self.batch_size)
+
             if epoch % self.save_epoch_freq == 0:
                 print_log(out_f, 'saving the model at the end of epoch %d, iterations %d' %
                           (epoch, total_steps))
                 self.save('latest')
+
                 if test_dataset:
-                    train_mae = self.eval_dice(train_dataset)
-                    test_mae = self.eval_dice(test_dataset)
-                    tensorbard_writer.add_scalars('accuracy', {'Train': train_mae,
-                                                               'Test': test_mae}, epoch)
+                    train_dice = self.eval_dice(train_dataset)
+                    test_dice = self.eval_dice(test_dataset)
+                    tensorbard_writer.add_scalars('Dice score', {'Train': train_dice,
+                                                                 'Test': test_dice}, epoch)
 
                     print_log(out_f, 'Train Dice: %.4f, Test Dice: %.4f. \t' %
-                              (train_mae, test_mae))
+                              (train_dice, test_dice))
 
             print_log(out_f, 'End of epoch %d / %d \t Time Taken: %d sec' %
                       (epoch, self.niter + self.niter_decay, time.time() - epoch_start_time))
@@ -204,18 +205,13 @@ class Model(object):
         :return: losses and visualization data.
         """
         fake_segmentation = self.netG.forward(ct)
-
         self.optimizer_G.zero_grad()
-
-        losses = networks.get_dice_loss(fake_segmentation, segmentation)
-        loss = losses.mean()
+        loss = networks.dice_loss(fake_segmentation, segmentation)
         loss.backward()
-
         grad_norm = torch.nn.utils.clip_grad_norm_(self.netG.parameters(), self.max_grad_norm)
         self.optimizer_G.step()
 
         losses = OrderedDict([('Loss', loss.data.item())])
-
         visuals = OrderedDict([('ct', ct.data),
                                ('segmentation_mask', segmentation.data),
                                ('fake_segmentation_mask', fake_segmentation.data)
@@ -268,9 +264,10 @@ class Model(object):
         """Sets the module in evaluation mode."""
         self.netG.eval()
 
-    def visualize_training(self, visuals, epoch, index):
+    def visualize_training(self, visuals, affine, epoch, index):
         """Save training image for visualization.
 
+        :param affine:
         :param visuals: images.
         :type visuals: dict
         :param epoch: epoch
@@ -278,20 +275,22 @@ class Model(object):
         :param index: index
         :type index: float
         """
-        visuals['ct'] = (visuals['ct'] + 1.) * 1250.
-        visuals['segmentation_mask'] = visuals['segmentation_mask'] * 1250.
-        visuals['fake_segmentation_mask'] = visuals['fake_segmentation_mask'] * 1250.
-        size = visuals['ct'].size()
+        ct = visuals['ct'].cpu().transpose_(2, 4)
+        visuals['segmentation_mask'] = visuals['segmentation_mask'].cpu().transpose_(2, 4)
+        visuals['fake_segmentation_mask'] = visuals['fake_segmentation_mask'].cpu().transpose_(2, 4)
 
-        images = [img.cpu().unsqueeze(1) for img in visuals.values()]
-        vis_image = torch.cat(images, dim=1).view(size[0] * len(images), size[1], size[2], size[3])
+        segmentation_mask = visuals['segmentation_mask'].argmax(dim=1, keepdim=True)
+        fake_segmentation_mask = visuals['fake_segmentation_mask'].argmax(dim=1, keepdim=True)
+
+        subject = tio.Subject(
+            ct=tio.ScalarImage(tensor=ct[0], affine=affine[0]),
+            segmentation_mask=tio.LabelMap(tensor=segmentation_mask[0], affine=affine[0]),
+            fake_segmentation_mask=tio.LabelMap(tensor=fake_segmentation_mask[0], affine=affine[0])
+        )
+
         save_path = os.path.join(self.expr_dir, "training_visuals")
         save_path = os.path.join(save_path, 'cycle_%02d_%04d.png' % (epoch, index))
-        image = vutils.make_grid(vis_image.cpu(), nrow=len(images))
-        image = image[0].numpy()
-        save_png(image, save_path)
-
-        return vutils.make_grid(vis_image.cpu(), normalize=True, nrow=len(images))
+        subject.plot(show=False, output_path=save_path)
 
     def save_options(self):
         """Save model options."""
@@ -312,23 +311,22 @@ class Model(object):
         """
         dice = []
 
-        for batch in dataset:
-            ct = batch['ct'][tio.DATA].to(self.device)
-            segmentation = batch['label_map'][tio.DATA].to(self.device)
+        with torch.no_grad():
+            for batch in dataset:
+                ct = batch['ct'][tio.DATA].to(self.device)
+                segmentation = batch['label_map'][tio.DATA].to(self.device)
 
-            fake_segmentation = self.netG.forward(ct)
-            dice.append(networks.get_dice_loss(fake_segmentation, segmentation).mean().data.item())
+                fake_segmentation = self.netG.forward(ct)
+                dice.append(networks.dice_score(fake_segmentation, segmentation).data.item())
         return np.mean(dice)
 
-    def test(self, dataset, export_path=None, checkpoint=None, use_gpu=True):
+    def test(self, dataset, export_path=None, checkpoint=None):
         """Model prediction for a SingleDataset.
 
         :param dataset: training dataset.
         :type dataset: :class:`DataLoader`
         :param export_path: export path.
         :type export_path: str
-        :param use_gpu: if gpu.
-        :type use_gpu: bool
         :return: MAE of the dataset.
         :rtype: float
         """
@@ -344,15 +342,17 @@ class Model(object):
         with torch.no_grad():
             for i, data in enumerate(dataset.loader):
                 ct = data['ct'][tio.DATA].to(self.device)
+                ct = ct.transpose_(2, 4)
                 locations = data[tio.LOCATION]
 
                 fake_segmentation = self.netG.forward(ct)
+                fake_segmentation = fake_segmentation.transpose_(2, 4)
 
                 dataset.aggregator.add_batch(fake_segmentation, locations)
 
-                print(f"{i+1}/{len(dataset.loader)}")
+                print(f"patch {i + 1}/{len(dataset.loader)}")
             affine = dataset.subjects[0]['ct'].affine
             foreground = dataset.aggregator.get_output_tensor()
             prediction = tio.ScalarImage(tensor=foreground, affine=affine)
-            print(time.time()-start)
+            print(time.time() - start)
             print("ok")

@@ -8,31 +8,33 @@ from rs2mask.dcm2mask import Dataset
 if __name__ == '__main__':
 
     # dataset
-    structures = ["Parotide D", "Parotide G",
-                  "Trachee", "Mandibule", "Tronc cerebral", "Encephale",
-                  "Oesophage", "Larynx", 'Levres', 'Cavite buccale']
+    # structures = ["Parotide D", "Parotide G",
+    #               "Trachee", "Mandibule", "Tronc cerebral", "Encephale",
+    #               "Oesophage", "Larynx", 'Levres', 'Cavite buccale']
 
-    # dataset = Dataset('data/ORL', 'data/ORL_dataset', structures)
+    structures = ["Coeur", "Sein G", "Sein D"]
+    # dataset = Dataset('data/data', 'data/DIBH_dataset', structures)
     # dataset.make()
 
     # training
-    root_training = 'data/ORL_dataset/'
+    root_training = 'data/DIBH_dataset/'
     checkpoints_dir = 'checkpoints/'
-    name = 'ORL_3D'
+    name = 'DIBH'
     expr_dir = os.path.join(checkpoints_dir, name)
 
-    dataset = DatasetPatch(root_training, structures, 0.9, batch_size=1, num_worker=0)
-    training_loader_patches, validation_loader_patches = dataset.get_loaders()
-
-    model = Model(expr_dir, structures, n_blocks=18, niter=100, niter_decay=100)
-    model.train(training_loader_patches, validation_loader_patches)
+    # dataset = DatasetPatch(root_training, structures, 0.9, batch_size=2, num_worker=2)
+    # training_loader_patches, validation_loader_patches = dataset.get_loaders()
+    #
+    # model = Model(expr_dir, structures, n_blocks=9, niter=150, niter_decay=50, display_epoch_freq=1,
+    #               print_freq=50)
+    # model.train(training_loader_patches, validation_loader_patches)
 
     # testing
-    # expr_dir = os.path.join(checkpoints_dir, name)
-    # model = Model(expr_dir, structures,  n_blocks=9)
-    # root_prediction = 'prediction/'
-    # pred_data_loader = DatasetSingle(root_prediction, structures)
-    # model.test(pred_data_loader)
+    expr_dir = os.path.join(checkpoints_dir, name)
+    model = Model(expr_dir, structures,  n_blocks=9)
+    root_prediction = 'prediction/'
+    pred_data_loader = DatasetSingle(root_prediction, structures)
+    model.test(pred_data_loader)
 
     # rtstruct
     # data = os.path.join('prediction')
