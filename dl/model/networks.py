@@ -16,7 +16,7 @@ def dice_loss(output, target):
         loss += 1. - ((2. * intersection + smooth) /
                       (oflat.sum() + tflat.sum() + smooth))
 
-    return loss / 4.
+    return loss / target.shape[1]
 
 
 def dice_score(output, target):

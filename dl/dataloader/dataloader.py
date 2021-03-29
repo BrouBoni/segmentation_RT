@@ -13,7 +13,6 @@ class DatasetSingle:
         self.transform = tio.Compose([
             tio.ToCanonical(),
             tio.RescaleIntensity(1, (1, 99)),
-            tio.OneHot()
         ])
 
         self.subjects = get_subjects(self.root, self.structures, self.transform)
@@ -33,7 +32,7 @@ class DatasetSingle:
 
 class DatasetPatch:
     def __init__(self, root, structures, ratio=0.9, crop_size=(384, 384, 4),
-                 batch_size=1, num_worker=2, samples_per_volume=20, max_length=200):
+                 batch_size=1, num_worker=2, samples_per_volume=5, max_length=200):
         self.root = root
         self.structures = structures
         self.n_structures = len(structures)
@@ -79,7 +78,7 @@ def get_subjects(path, structures, transform):
         subject = tio.Subject(
             ct=tio.ScalarImage(ct_path),
         )
-        label_map = torch.zeros(subject["ct"].shape)
+        label_map = torch.zeros(subject["ct"].shape, dtype=torch.long)
         for i, (k, v) in enumerate(structures_path_dict.items()):
             label_map += tio.LabelMap(v).data * (i + 1)
 

@@ -100,8 +100,9 @@ class Model(object):
                                               device=self.device)
 
         # define all optimizers here
-        self.optimizer_G = torch.optim.AdamW(self.netG.parameters(),
-                                             lr=self.lr, betas=(self.beta1, 0.999))
+        self.optimizer_G = torch.optim.Adam(self.netG.parameters(),
+                                            lr=self.lr, betas=(self.beta1, 0.999))
+        self.loss = torch.nn.CrossEntropyLoss()
 
         if not os.path.exists(expr_dir):
             os.makedirs(expr_dir)
@@ -165,7 +166,7 @@ class Model(object):
                 if total_steps % self.print_freq == 0:
                     t = (time.time() - print_start_time) / self.batch_size
                     print_log(out_f, format_log(epoch, epoch_iter, losses, t))
-                    tensorbard_writer.add_scalars('losses', {'Dice loss': losses['Loss']}, total_steps)
+                    tensorbard_writer.add_scalars('losses', {'Cross entropy loss': losses['Loss']}, total_steps)
                     print_start_time = time.time()
 
             if epoch % self.display_epoch_freq == 0:
@@ -205,7 +206,7 @@ class Model(object):
         """
         fake_segmentation = self.netG.forward(ct)
         self.optimizer_G.zero_grad()
-        loss = networks.dice_loss(fake_segmentation, segmentation)
+        loss = self.loss(fake_segmentation, segmentation)
         loss.backward()
         grad_norm = torch.nn.utils.clip_grad_norm_(self.netG.parameters(), self.max_grad_norm)
         self.optimizer_G.step()
@@ -278,7 +279,7 @@ class Model(object):
         visuals['segmentation_mask'] = visuals['segmentation_mask'].cpu().transpose_(2, 4)
         visuals['fake_segmentation_mask'] = visuals['fake_segmentation_mask'].cpu().transpose_(2, 4)
 
-        segmentation_mask = visuals['segmentation_mask'].argmax(dim=1, keepdim=True)
+        segmentation_mask = visuals['segmentation_mask']
         fake_segmentation_mask = visuals['fake_segmentation_mask'].argmax(dim=1, keepdim=True)
 
         for i in range(ct.shape[0]):

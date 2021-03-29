@@ -29,7 +29,7 @@ if __name__ == '__main__':
     training_loader_patches, validation_loader_patches = dataset.get_loaders()
 
     model = Model(expr_dir, structures, n_blocks=9, niter=150, niter_decay=50, display_epoch_freq=1,
-                  print_freq=10)
+                  print_freq=20)
     model.train(training_loader_patches, validation_loader_patches)
 
     # testing
