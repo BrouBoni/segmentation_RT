@@ -3,7 +3,7 @@ import os
 from dl.dataloader.dataloader import DatasetPatch, DatasetSingle
 from dl.model.model import Model
 # from mask2rs.rtstruct import RTStruct
-from rs2mask.dcm2mask import Dataset
+# from rs2mask.dcm2mask import Dataset
 
 if __name__ == '__main__':
 
