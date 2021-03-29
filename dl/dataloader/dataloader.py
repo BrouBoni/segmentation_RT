@@ -12,7 +12,7 @@ class DatasetSingle:
 
         self.transform = tio.Compose([
             tio.ToCanonical(),
-            tio.RescaleIntensity(1, (1, 99)),
+            tio.RescaleIntensity(1, (1, 99))
         ])
 
         self.subjects = get_subjects(self.root, self.structures, self.transform)
@@ -42,8 +42,7 @@ class DatasetPatch:
 
         self.transform = tio.Compose([
             tio.ToCanonical(),
-            tio.RescaleIntensity(1, (1, 99.0)),
-            tio.OneHot()
+            tio.RescaleIntensity(1, (1, 99.0))
         ])
 
         self.subjects = get_subjects(self.root, self.structures, self.transform)

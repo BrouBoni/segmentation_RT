@@ -154,7 +154,7 @@ class Model(object):
                 ct = data['ct'][tio.DATA].to(self.device)
                 mask = data['label_map'][tio.DATA].to(self.device)
                 ct = ct.transpose_(2, 4)
-                mask = mask.transpose_(2, 4)
+                mask = torch.squeeze(mask.transpose_(2, 4), 1)
                 total_steps += self.batch_size
                 epoch_iter += self.batch_size
 
