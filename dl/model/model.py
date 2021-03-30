@@ -65,7 +65,7 @@ class Model(object):
     def __init__(self, expr_dir, structures, seed=None, batch_size=None,
                  epoch_count=1, niter=150, niter_decay=50, beta1=0.5, lr=0.0002,
                  ngf=64, n_blocks=9, input_nc=1, use_dropout=False, norm='batch', max_grad_norm=500.,
-                 monitor_grad_norm=True, save_epoch_freq=2, print_freq=100, display_epoch_freq=1, testing=False):
+                 monitor_grad_norm=True, save_epoch_freq=2, print_freq=60, display_epoch_freq=1, testing=False):
 
         self.expr_dir = expr_dir
         self.structures = structures
@@ -102,7 +102,9 @@ class Model(object):
         # define all optimizers here
         self.optimizer_G = torch.optim.Adam(self.netG.parameters(),
                                             lr=self.lr, betas=(self.beta1, 0.999))
-        self.loss = torch.nn.CrossEntropyLoss()
+        weights = [1 for _ in range(self.output_nc)]
+        class_weights = torch.FloatTensor(weights).to(self.device)
+        self.loss = torch.nn.CrossEntropyLoss(weight=class_weights)
 
         if not os.path.exists(expr_dir):
             os.makedirs(expr_dir)
@@ -276,7 +278,7 @@ class Model(object):
         :type index: float
         """
         ct = visuals['ct'].cpu().transpose_(2, 4)
-        visuals['segmentation_mask'] = visuals['segmentation_mask'].cpu().transpose_(2, 4)
+        visuals['segmentation_mask'] = torch.unsqueeze(visuals['segmentation_mask'].cpu(), 1).transpose_(2, 4)
         visuals['fake_segmentation_mask'] = visuals['fake_segmentation_mask'].cpu().transpose_(2, 4)
 
         segmentation_mask = visuals['segmentation_mask']

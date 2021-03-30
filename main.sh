@@ -9,8 +9,8 @@
 #SBATCH --time=99:59:59              # maximum execution time (HH:MM:SS)
 #SBATCH --output=log/segmentation_RT_DIBH%j.out # output file name
 #SBATCH --error=log/segmentation_RT_DIBH%j.err  # error file name
-#SBATCH --partition=gpu_p2
-#SBATCH --qos=qos_gpu-t4
+#SBATCH -C v100-32g
+# SBATCH --qos=qos_gpu-t4
 set -x
 cd $WORK/segmentation_RT
 

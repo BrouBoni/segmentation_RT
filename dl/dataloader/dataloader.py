@@ -31,8 +31,8 @@ class DatasetSingle:
 
 
 class DatasetPatch:
-    def __init__(self, root, structures, ratio=0.9, crop_size=(384, 384, 4),
-                 batch_size=1, num_worker=2, samples_per_volume=5, max_length=200):
+    def __init__(self, root, structures, ratio=0.9, crop_size=(256, 256, 6),
+                 batch_size=1, num_worker=2, samples_per_volume=20, max_length=200):
         self.root = root
         self.structures = structures
         self.n_structures = len(structures)
@@ -100,7 +100,7 @@ def random_split(subjects, ratio):
 def queuing(training_subjects, validation_subjects, crop_size, samples_per_volume=10,
             max_length=200, num_workers=2):
 
-    sampler = tio.data.UniformSampler(crop_size)
+    sampler = tio.data.WeightedSampler(crop_size, 'label_map')
 
     patches_training_set = tio.Queue(
         subjects_dataset=training_subjects,

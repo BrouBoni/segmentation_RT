@@ -13,7 +13,7 @@ if __name__ == '__main__':
     #               "Oesophage", "Larynx", 'Levres', 'Cavite buccale']
 
     structures = ["Coeur", "Sein G", "Sein D"]
-    # dataset = Dataset('data/data', 'data/DIBH_dataset', structures)
+    # dataset = Dataset('data/data', 'data/DIBH_dataset4', structures)
     # dataset.make()
 
     # training
@@ -25,11 +25,10 @@ if __name__ == '__main__':
     # name = 'ORL'
     expr_dir = os.path.join(checkpoints_dir, name)
 
-    dataset = DatasetPatch(root_training, structures, 0.9, batch_size=2, num_worker=2)
+    dataset = DatasetPatch(root_training, structures, 0.9, batch_size=4)
     training_loader_patches, validation_loader_patches = dataset.get_loaders()
 
-    model = Model(expr_dir, structures, n_blocks=9, niter=150, niter_decay=50, display_epoch_freq=1,
-                  print_freq=20)
+    model = Model(expr_dir, structures, n_blocks=9, niter=150, niter_decay=50)
     model.train(training_loader_patches, validation_loader_patches)
 
     # testing
