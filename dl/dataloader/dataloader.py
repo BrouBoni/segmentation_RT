@@ -5,28 +5,27 @@ import torch.utils.data as data
 
 
 class DatasetSingle:
-    def __init__(self, root, structures, patch_size=(512, 512, 16)):
+    def __init__(self, root, structures, patch_size=(512, 512, 6)):
         self.root = root
         self.structures = structures
         self.n_structures = len(structures)
 
         self.transform = tio.Compose([
             tio.ToCanonical(),
-            tio.RescaleIntensity(1, (1, 99))
+            tio.RescaleIntensity(1, (1, 99.0))
         ])
-
-        self.subjects = get_subjects(self.root, self.structures, self.transform)
+        self.subject = tio.Subject(ct=tio.ScalarImage(os.path.join(root, 'ct.nii')))
 
         self.patch_size = patch_size
-        patch_overlap = 2
+        self.patch_overlap = 4
         grid_sampler = tio.inference.GridSampler(
-            self.subjects[0],
+            self.transform(self.subject),
             self.patch_size,
-            patch_overlap,
+            self.patch_overlap,
         )
 
         self.loader = torch.utils.data.DataLoader(
-            grid_sampler, batch_size=1, num_workers=0, drop_last=True)
+            grid_sampler, batch_size=4, drop_last=True)
         self.aggregator = tio.inference.GridAggregator(grid_sampler)
 
 

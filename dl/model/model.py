@@ -324,7 +324,7 @@ class Model(object):
                 dice.append(networks.dice_score(fake_segmentation, segmentation).data.item())
         return np.mean(dice)
 
-    def test(self, dataset, export_path=None, checkpoint=None):
+    def test(self, dataset, export_path=None, checkpoint=None, save=False):
         """Model prediction for a SingleDataset.
 
         :param dataset: training dataset.
@@ -338,7 +338,7 @@ class Model(object):
         self.load(checkpoint)
         self.eval()
 
-        prediction_path = export_path or os.path.join(self.expr_dir, f"prediction_e")
+        prediction_path = export_path or self.expr_dir
         if not os.path.exists(prediction_path):
             os.makedirs(prediction_path)
 
@@ -355,8 +355,11 @@ class Model(object):
                 dataset.aggregator.add_batch(fake_segmentation, locations)
 
                 print(f"patch {i + 1}/{len(dataset.loader)}")
-            affine = dataset.subjects[0]['ct'].affine
+            affine = dataset.transform(dataset.subject['ct']).affine
             foreground = dataset.aggregator.get_output_tensor()
-            prediction = tio.ScalarImage(tensor=foreground, affine=affine)
-            print(time.time() - start)
-            print("ok")
+            fake_segmentation_mask = foreground.argmax(dim=0, keepdim=True).type(torch.int8)
+            prediction = tio.ScalarImage(tensor=fake_segmentation_mask, affine=affine)
+            print(f"{time.time() - start} sec. for evaluation")
+            if save:
+                prediction.save(os.path.join(prediction_path,'fake_segmentation.nii'))
+            return prediction
