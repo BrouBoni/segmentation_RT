@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath('.'))
 # -- Project information -----------------------------------------------------
 
 project = 'segmentation_RT'
-copyright = '2021, Kévin Brou Boni'
+copyright = '2021, Kévin Brou Boni & Julien Laffarguette'
 author = 'Kévin Brou Boni'
 
 

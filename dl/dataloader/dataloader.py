@@ -1,291 +1,177 @@
 import os
-import random
-from collections import OrderedDict
 
-import numpy as np
 import torch
 import torch.utils.data as data
-import torchvision.transforms as transforms
-from PIL import Image
+import torchio as tio
+
+from util.util import get_subjects
 
 
-class AlignedDataset(data.Dataset):
-    """A dataset class for paired image dataset. Class that overrides :class:`data.Dataset`.
+class DatasetSingle:
+    """Initialize a dataset suited inference.
 
-    It assumes that the directory '/root/train' contains image pairs in the form of {ct,mask_name}.
-    During test time, you need to prepare a directory '/root/test'.
+            :param str root:
+                root folder.
 
-    :param string root:
-        Root directory.
+            :param list[str] structures:
+                list of structures.
 
-    :param string mask_name:
-        Name of the mask.
-
-    :param int load_size:
-        Load images at this size.
-
-    :param int crop_size:
-        Crop images at this size.
-
-    :param bool flip:
-        Flip images or not.
-
-    :param int crop_size:
-        Crop images at this size.
-
-    :param str subset:
-        train or test.
+            :param (int, int, int) patch_size:
+                Tuple of integers (width, height, depth).
     """
 
-    def __init__(self, root, mask_name, load_size, crop_size, flip, subset):
-
+    def __init__(self, root, structures, patch_size=(512, 512, 6)):
         self.root = root
-        self.mask = mask_name
-        self.subset = subset
-        self.crop_size = crop_size
-        self.load_size = load_size
-        self.flip = flip
+        self.structures = structures
+        self.n_structures = len(structures)
 
-        if subset == 'training':
-            self.dir_image = os.path.join(self.root, 'train')
+        self.transform = tio.Compose([
+            tio.ToCanonical(),
+            tio.RescaleIntensity(1, (1, 99.0))
+        ])
+        self.subject = tio.Subject(ct=tio.ScalarImage(os.path.join(root, 'ct.nii')))
 
-        elif subset == 'testing':
-            self.dir_image = os.path.join(self.root, 'test')
+        self.patch_size = patch_size
+        self.patch_overlap = 4
+        grid_sampler = tio.inference.GridSampler(
+            self.transform(self.subject),
+            self.patch_size,
+            self.patch_overlap,
+        )
 
-        else:
-            raise NotImplementedError('subset %s no supported' % subset)
-
-        self.image_names = sorted(os.listdir(os.path.join(self.dir_image, "ct")))
-        self.ct_dir = os.path.join(self.dir_image, "ct")
-        self.mask_dir = os.path.join(self.dir_image, self.mask)
-
-        self.ct_paths = sorted(make_dataset(self.ct_dir))
-        self.mask_paths = sorted(make_dataset(self.mask_dir))
-
-        # shuffle data
-        rand_state = random.getstate()
-        random.seed(123)
-        index = range(len(self.ct_paths))
-        random.shuffle(list(index))
-        self.ct_paths = [self.ct_paths[i] for i in index]
-        self.mask_paths = [self.mask_paths[i] for i in index]
-
-        random.setstate(rand_state)
-
-        self.size = len(self.ct_paths)
-
-    def __getitem__(self, index):
-        """Return a data point and its metadata information."""
-        ct_path = self.ct_paths[index]
-        mask_path = self.mask_paths[index]
-
-        ct_img = Image.open(ct_path).convert('I')
-        mask_img = Image.open(mask_path).convert('I')
-
-        parameters = get_transform_parameters(self.load_size, self.crop_size, self.flip)
-        transform = get_transform(parameters)
-
-        ct_img = transform(ct_img)
-        ct_img = torch.as_tensor(np.array(ct_img, dtype=np.float32, copy=False))
-        ct_img = ct_img.clamp(0, 2500) / 1250. - 1.
-
-        mask_img = transform(mask_img)
-        mask_img = torch.as_tensor(np.array(mask_img, dtype=np.float32, copy=False))
-
-        return {'ct': ct_img.type(torch.float32).unsqueeze_(0),
-                'mask': mask_img.unsqueeze_(0)}
-
-    def __len__(self):
-        return self.size
+        self.loader = torch.utils.data.DataLoader(
+            grid_sampler, batch_size=4, drop_last=True)
+        self.aggregator = tio.inference.GridAggregator(grid_sampler)
 
 
-class SingleDataset(data.Dataset):
-    """This dataset class can load a set of images specified by the path.
+class DatasetPatch:
+    """Initialize a dataset suited for patch-based training.
 
-    It assumes that the directory '/root/' contains CT images.
+        :param str root:
+            root folder.
 
-    :param string root:
-        Root directory.
+        :param list[str] structures:
+            list of structures..
 
-    :param string mask_name:
-        Name of the mask.
+        :param float ratio:
+            splitting ratio.
 
-    :param int load_size:
-        Load images at this size.
-    """
-
-    def __init__(self, root, mask_name, load_size):
-
-        self.root = root
-        self.mask = mask_name
-        self.load_size = load_size
-
-        self.ct_paths = sorted(make_dataset(self.root))
-        self.size = len(self.ct_paths)
-
-    def __getitem__(self, index):
-        ct_path = self.ct_paths[index]
-
-        ct_img = Image.open(ct_path).convert('I')
-
-        parameters = get_transform_parameters(self.load_size, self.load_size, False)
-        transform = get_transform(parameters)
-
-        ct_img = transform(ct_img)
-        ct_torch = torch.from_numpy(np.array(ct_img, dtype=np.float32))
-        ct_torch = ct_torch.clamp(0, 2500) / 1250. - 1.
-
-        dataset = OrderedDict([('ct_path', ct_path),
-                               ('ct', ct_torch.type(torch.float32).unsqueeze_(0))
-                               ])
-
-        return dataset
-
-    def __len__(self):
-        return self.size
-
-
-class DataLoader(object):
-    """Dataset.
-
-        :param string root:
-            Root directory.
-
-        :param string mask_name:
-            Name of the mask.
-
-        :param str subset:
-            train or test.
+        :param (int, int, int) patch_size:
+            Tuple of integers (width, height, depth).
 
         :param int batch_size:
-            how many samples per batch to load (default: 1).
+            batch size.
 
-        :param int load_size:
-            Load images at this size(default: 512).
+        :param int num_worker:
+            number of subprocesses to use for data loading..
 
-        :param int crop_size:
-            Crop images at this size(default: 256).
+        :param int samples_per_volume:
+            number of patches to extract from each volume.
 
-        :param bool flip:
-            Flip images or not (default: False).
-
-        :param bool shuffle:
-            set to True to have the data reshuffled at every epoch (default: False).
-
-        :param bool drop_last:
-            set to True to drop the last incomplete batch, if the dataset size is not divisible by the batch size.
-            If False and the size of dataset is not divisible by the batch size, then the last batch will be smaller.
-            (default: False)
-
+        :param int max_length:
+            maximum number of patches that can be stored in the queue.
         """
 
-    def __init__(self, root, mask_name, subset, batch_size=4, load_size=512, crop_size=256, flip=False,
-                 shuffle=False, drop_last=False, num_workers=0):
-        self.subset = subset
-        if self.subset == "prediction":
-            self.dataset = SingleDataset(root, mask_name, load_size)
-        else:
-            self.dataset = AlignedDataset(root, mask_name, load_size, crop_size, flip, subset)
+    def __init__(self, root, structures, ratio=0.9, patch_size=(256, 256, 6),
+                 batch_size=1, num_worker=2, samples_per_volume=20, max_length=200):
 
-        self.dataloader = torch.utils.data.DataLoader(
-            dataset=self.dataset,
-            batch_size=batch_size,
-            shuffle=shuffle,
-            num_workers=num_workers,
-            drop_last=drop_last)
+        self.root = root
+        self.structures = structures
+        self.n_structures = len(structures)
 
-    def __len__(self):
-        return len(self.dataset)
+        self.batch_size = batch_size
+        self.num_worker = num_worker
 
-    def load_data(self):
-        print(f"#{self.subset} images = {self.__len__()}")
-        return self.dataloader
+        self.transform = tio.Compose([
+            tio.ToCanonical(),
+            tio.RescaleIntensity(1, (1, 99.0))
+        ])
+
+        self.subjects = get_subjects(self.root, self.structures, self.transform)
+        self.training_subjects, self.validation_subjects = random_split(self.subjects, ratio)
+        self.patches_training_set, self.patches_validation_set = queuing(self.training_subjects,
+                                                                         self.validation_subjects,
+                                                                         patch_size, samples_per_volume,
+                                                                         max_length, num_worker)
+
+    def get_loaders(self):
+        """Return training and validation :class:`data.DataLoader`.
+
+        :return: training and validation DataLoader.
+        :rtype: (:class:`data.DataLoader`,:class:`data.DataLoader`)
+        """
+        training_loader_patches = torch.utils.data.DataLoader(
+            self.patches_training_set, batch_size=self.batch_size,
+            drop_last=True)
+
+        validation_loader_patches = torch.utils.data.DataLoader(
+            self.patches_validation_set, batch_size=self.batch_size,
+            drop_last=True)
+
+        print('Training set:', len(self.training_subjects), 'subjects')
+        print('Validation set:', len(self.validation_subjects), 'subjects')
+
+        return training_loader_patches, validation_loader_patches
 
 
-def get_transform_parameters(load_size, crop_size, flip):
-    """Parameters for data augmentation.
-    :param crop_size: Crop size.
-    :type crop_size: int
-    :param load_size: Image rescaling.
-    :type load_size: int
-    :param flip: Flip or not
-    :type flip: bool
-    :return: Crop position and flip.
-    :rtype: dict[int, int, (int, int), bool]
+def random_split(subjects, ratio=0.8):
+    """Randomly split a dataset into non-overlapping new datasets according to the ratio.
+
+    :param subjects: dataset to be split.
+    :type subjects: :class:`tio.SubjectsDataset`
+    :param ratio: splitting ratio.
+    :type ratio: float
+    :return: training and validation datasets.
+    :rtype: (:class:`tio.SubjectsDataset`, :class:`tio.SubjectsDataset`)
     """
-    new_h = new_w = load_size
+    num_subjects = len(subjects)
+    num_training_subjects = int(ratio * num_subjects)
+    num_validation_subjects = num_subjects - num_training_subjects
 
-    x = random.randint(0, np.maximum(0, new_w - crop_size))
-    y = random.randint(0, np.maximum(0, new_h - crop_size))
-
-    if flip:
-        flip = random.random() > 0.5
-    else:
-        flip = False
-
-    return {'load_size': load_size, 'crop_size': crop_size, 'crop_position': (x, y), 'flip': flip}
+    num_split_subjects = num_training_subjects, num_validation_subjects
+    return torch.utils.data.random_split(subjects, num_split_subjects)
 
 
-# noinspection PyTypeChecker
-def get_transform(parameters):
-    transform_list = [transforms.Resize([parameters['load_size'], parameters['load_size']], Image.NEAREST)]
+def queuing(training_subjects, validation_subjects, patch_size, samples_per_volume=10,
+            max_length=200, num_workers=2):
+    """Queue used for stochastic patch-based training.
+    See :class:`tio.data.Queue`.
 
-    if parameters['load_size'] != parameters['crop_size']:
-        transform_list.append(transforms.Lambda(lambda img:
-                                                __crop(img, parameters['crop_position'], parameters['crop_size'])))
-        transform_list.append(transforms.Lambda(lambda img:
-                                                __flip(img, parameters['flip'])))
-
-    return transforms.Compose(transform_list)
-
-
-def make_dataset(directory):
-    """List all images in a directory.
-
-    :param directory: path to directory.
-    :type directory: str
-    :return: List of file in directory.
-    :rtype: list[str]
+    :param training_subjects: train dataset.
+    :type training_subjects: :class:`tio.SubjectsDataset`
+    :param validation_subjects: validation dataset.
+    :type validation_subjects: :class:`tio.SubjectsDataset`
+    :param patch_size: Tuple of integers (width, height, depth).
+    :type patch_size: (int, int, int)
+    :param samples_per_volume: number of patches to extract from each volume.
+    :type samples_per_volume: int
+    :param max_length: maximum number of patches that can be stored in the queue.
+    :type max_length: int
+    :param num_workers: number of subprocesses to use for data loading.
+    :type num_workers: int
+    :return: training and validation queue.
+    :rtype: (:class:`tio.data.Queue`, :class:`tio.data.Queue`)
     """
-    images = []
-    assert os.path.isdir(directory), '%s is not a valid directory' % directory
+    sampler = tio.data.WeightedSampler(patch_size, 'label_map')
 
-    for root, _, files in sorted(os.walk(directory)):
-        for name in files:
-            path = os.path.join(root, name)
-            images.append(path)
+    patches_training_set = tio.Queue(
+        subjects_dataset=training_subjects,
+        max_length=max_length,
+        samples_per_volume=samples_per_volume,
+        sampler=sampler,
+        num_workers=num_workers,
+        shuffle_subjects=True,
+        shuffle_patches=True,
+    )
 
-    return images
+    patches_validation_set = tio.Queue(
+        subjects_dataset=validation_subjects,
+        max_length=max_length,
+        samples_per_volume=samples_per_volume,
+        sampler=sampler,
+        num_workers=num_workers,
+        shuffle_subjects=False,
+        shuffle_patches=False,
+    )
 
-
-def __crop(image, position, size):
-    """Return a cropped image.
-    :param image: an image.
-    :type image: :class:`Image`
-    :param position: origin (x, y).
-    :type position: (int, int)
-    :param size: desired size.
-    :type size: int
-    :return: Image cropped.
-    :rtype: :class:`Image`
-    """
-    ow, oh = image.size
-    x1, y1 = position
-    tw = th = size
-    if ow > tw or oh > th:
-        return image.crop((x1, y1, x1 + tw, y1 + th))
-    return image
-
-
-def __flip(image, flip):
-    """Return a flipped or not image.
-    :param image: an image.
-    :type image: :class:`Image`
-    :param flip: flip or not.
-    :type flip: bool
-    :return: image flipped or not.
-    :rtype: :class:`Image`
-    """
-    if flip:
-        return image.transpose(Image.FLIP_LEFT_RIGHT)
-    return image
+    return patches_training_set, patches_validation_set

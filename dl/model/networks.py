@@ -6,6 +6,39 @@ import torch.nn as nn
 from dl.model.modules import ResnetGenerator
 
 
+def dice_loss(output, target):
+    """Dice Loss between two tensors.
+
+    :param output: input tensor.
+    :type output: :class:`torch.Tensor`
+    :param target: ground truth tensor.
+    :type target: :class:`torch.Tensor`
+    :return: dice loss.
+    """
+    smooth = 1.
+    loss = 0.
+    for c in range(target.shape[1]):
+        oflat = output[:, c].contiguous().view(-1)
+        tflat = target[:, c].contiguous().view(-1)
+        intersection = (oflat * tflat).sum()
+        loss += 1. - ((2. * intersection + smooth) /
+                      (oflat.sum() + tflat.sum() + smooth))
+
+    return loss / target.shape[1]
+
+
+def dice_score(output, target):
+    """Dice Score between two tensors.
+
+        :param output: input tensor.
+        :type output: :class:`torch.Tensor`
+        :param target: ground truth tensor.
+        :type target: :class:`torch.Tensor`
+        :return: dice score.
+        """
+    return 1 - dice_loss(output, target)
+
+
 def weights_init(m):
     """Initialize network weights.
 
@@ -17,42 +50,37 @@ def weights_init(m):
         m.weight.data.normal_(0.0, 0.02)
         if hasattr(m.bias, 'data'):
             m.bias.data.fill_(0)
-    elif classname.find('BatchNorm2d') != -1:
+    elif classname.find('BatchNorm3d') != -1:
         m.weight.data.normal_(1.0, 0.02)
         m.bias.data.fill_(0)
 
 
-def define_generator(input_nc, output_nc, ngf, n_blocks,
-                     use_dropout=False, gpu_ids=None):
+def define_generator(input_nc, output_nc, ngf, n_blocks, device,
+                     use_dropout=False):
     """Create a generator.
 
     :param input_nc: the number of channels in input images.
     :type input_nc: int
     :param output_nc: the number of channels in output images.
-    :type output_nc: int
+    :type output_nc: i
     :param ngf: the number of filters in the last conv layer.
     :type ngf: int
     :param n_blocks: the number of ResNet blocks.
     :type n_blocks: int
     :param use_dropout: if use dropout layers.
     :type use_dropout: bool
-    :param gpu_ids:  gpu id.
-    :type gpu_ids: list[int]
+    :param device:  device.
+    :type device:
     :return: a generator.
     :rtype: :class:`torch.nn.Module`
     """
 
-    if gpu_ids is None:
-        gpu_ids = []
-
-    norm_layer = functools.partial(nn.BatchNorm2d, affine=True)
+    norm_layer = functools.partial(nn.BatchNorm3d, affine=True)
 
     net_g = ResnetGenerator(input_nc, output_nc, ngf, n_blocks, norm_layer=norm_layer,
-                            use_dropout=use_dropout, gpu_ids=gpu_ids)
+                            use_dropout=use_dropout)
 
-    if len(gpu_ids) > 0:
-        assert (torch.cuda.is_available())
-        net_g.cuda()
+    net_g.to(device)
     net_g.apply(weights_init)
     return net_g
 
