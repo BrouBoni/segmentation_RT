@@ -1,9 +1,9 @@
 import os
-import random
-import shutil
 
 import numpy as np
 import png
+import torch
+import torchio as tio
 
 
 def print_log(out_f, message):
@@ -71,15 +71,19 @@ def listdir_full_path(path):
     return [os.path.join(path, f) for f in os.listdir(path)]
 
 
-def save_image(image, path, width=10, bitdepth=8, start=None, end=None):
-    """ bitdepth=8,
+def save_image(image, path, width=10, bit_depth=8, start=None, end=None):
+    """Save image from numpy array.
 
-    :param bitdepth: encoding.
+    :param bit_depth: encoding.
+    :type bit_depth: int
     :param image: 3D npy array
-    :param path: output folder (str)
-    :param width : number of kept slices before the first and after the last non empty slices
-    :param start: first slice (default 0)
-    :param end: last slice (default -1)
+    :type image:
+    :param path: output folder.
+    :type path: str
+    :param start: first slice.
+    :type path: int
+    :param end: last slice.
+    :type path: int
     """
     if start and end:
         slicer = range(start, end)
@@ -99,7 +103,7 @@ def save_image(image, path, width=10, bitdepth=8, start=None, end=None):
     for i in slicer:
         filename = os.path.join(path, ipp + "_" + str(i))
         with open(filename + ".png", 'wb') as f:
-            writer = png.Writer(width=image.shape[0], height=image.shape[1], bitdepth=bitdepth, greyscale=True)
+            writer = png.Writer(width=image.shape[0], height=image.shape[1], bitdepth=bit_depth, greyscale=True)
             array = image[:, :, i].astype(np.uint16)
             array2list = array[:, :].tolist()
             writer.write(f, array2list)
@@ -118,6 +122,38 @@ def save_png(array, path):
         array = array.astype(np.uint16)
         array2list = array[:, :].tolist()
         writer.write(f, array2list)
+
+
+def get_subjects(path, structures, transform):
+    """Browse the path folder to build a dataset. Folder must contains Subjects with the CT and masks.
+
+    :param path: root folder.
+    :type path: str
+    :param structures: list of structures.
+    :type structures: list[str]
+    :param transform: transforms to be applied.
+    :type transform: :class:`tio.transforms.Transform`
+    :return: Base TorchIO dataset.
+    :rtype: :class:`tio.SubjectsDataset`
+    """
+    subject_ids = os.listdir(path)
+    subjects = []
+    for subject_id in subject_ids:
+        ct_path = os.path.join(path, subject_id, 'ct.nii')
+        structures_path_dict = {k: os.path.join(path, subject_id, k + '.nii') for k in structures}
+
+        subject = tio.Subject(
+            ct=tio.ScalarImage(ct_path),
+        )
+        label_map = torch.zeros(subject["ct"].shape, dtype=torch.long)
+        for i, (k, v) in enumerate(structures_path_dict.items()):
+            label_map += tio.LabelMap(v).data * (i + 1)
+
+        label_map[label_map > len(structures)] = 0
+        subject.add_image(tio.LabelMap(tensor=label_map, affine=subject["ct"].affine), 'label_map')
+        subjects.append(subject)
+
+    return tio.SubjectsDataset(subjects, transform=transform)
 
 
 def parse_opt_file(opt_path):
@@ -154,52 +190,3 @@ def parse_opt_file(opt_path):
             k, v = line.split(':')
             opt[k.strip()] = parse_val(v.strip())
     return opt
-
-
-def sort_dataset(path, export_path, structures, ratio=0.8):
-    """Creates a dataset. Takes only ct slices for which a structures is available
-
-    :param structures: List of structure.
-    :type structures: List[str]
-    :param path: root directory.
-    :type path: str
-    :param export_path: export path.
-    :type export_path: str
-    :param ratio: ration train/test set.
-    :type ratio: float
-    """
-    print(f"Sorting dataset at {export_path}")
-
-    structures.append('ct')
-    niis = structures.copy()
-    for nii in niis:
-        os.makedirs(os.path.join(export_path, "train", nii), exist_ok=True)
-        os.makedirs(os.path.join(export_path, "test", nii), exist_ok=True)
-
-    patients = [patient for patient in os.listdir(path) if not patient.startswith('.')]
-    patients = np.array(patients)
-
-    # Setup for random choice
-    n_patients = len(patients)
-    n_patients_train = round(n_patients * ratio)
-
-    #  random choice of which patient goes to train and which one goes to test
-    mask = [False] * (n_patients - n_patients_train) + [True] * n_patients_train
-    random.shuffle(mask)
-    mask = np.array(mask)
-
-    train_patient = patients[mask]
-    test_patient = patients[~mask]
-
-    print(f"train = {train_patient}\ntest = {test_patient} \n")
-
-    for train, patient in zip(mask, patients):
-        for nii in niis:
-            file_path = os.path.join(path, patient, nii+'.nii')
-            file_export_name = nii+"_"+patient+".nii"
-            if train:
-                file_destination = os.path.join(export_path, "train", nii, file_export_name)
-            else:
-                file_destination = os.path.join(export_path, "test", nii, file_export_name)
-
-            shutil.copyfile(file_path, file_destination)

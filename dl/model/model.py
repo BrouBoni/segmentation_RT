@@ -125,7 +125,7 @@ class Model(object):
     def train(self, train_dataset, test_dataset=None):
         """Train the model with a dataset.
 
-        :param train_dataset: training dataset
+        :param train_dataset: training dataset.
         :type train_dataset: :class:`DataLoader`
         :param test_dataset: test dataset. If given output statistic during training.
         :type test_dataset: :class:`DataLoader`
@@ -361,5 +361,5 @@ class Model(object):
             prediction = tio.ScalarImage(tensor=fake_segmentation_mask, affine=affine)
             print(f"{time.time() - start} sec. for evaluation")
             if save:
-                prediction.save(os.path.join(prediction_path,'fake_segmentation.nii'))
+                prediction.save(os.path.join(prediction_path, 'fake_segmentation.nii'))
             return prediction

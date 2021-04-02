@@ -1,12 +1,7 @@
 import os
-import random
-import shutil
 
-import nibabel as nib
 import numpy as np
 from dcmrtstruct2nii import dcmrtstruct2nii, list_rt_structs
-
-from util.util import listdir_full_path, save_image
 
 
 class Dataset:

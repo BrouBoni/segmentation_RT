@@ -21,13 +21,28 @@ class RTStruct:
     """
     Class that builds a RT structure :class:`pydicom.dataset.Dataset`.
 
-    :param string path:
-        Root directory which includes a structures folder.
+    :param string ct_path:
+        Path to the CT folder.
+
+    :param Union[string, :class:`tio.LABEL`] mask:
+        Path to the CT folder.
+
+    :param list[str] structures:
+        List of structures.
+
+    :param str output:
+        Export path.
     """
 
-    def __init__(self, path):
-        self.path = path
-        self.ct_path = os.path.join(path, "ct")
+    def __init__(self, ct_path, mask, structures=None, output=None):
+
+        if structures is None:
+            structures = []
+
+        self.ct_path = ct_path
+        self.mask = mask
+        self.structures = structures
+        self.output = output or "RS.dcm"
         self.ct_files = natsorted([os.path.join(self.ct_path, ct) for ct in os.listdir(self.ct_path)
                                    if ct.endswith("dcm")])
 
@@ -36,7 +51,7 @@ class RTStruct:
 
         self.ds_ct_reference = self.ds_cts[0]
 
-        self.mask = Mask(self.path, self.ds_cts)
+        self.mask = Mask(self.mask, ds_cts=self.ds_cts, ct_path=self.ct_path)
         self.ds_rs = Dataset()
 
         # RS meta
@@ -191,7 +206,8 @@ class RTStruct:
 
     def create(self):
         """Convert the masks into structure set."""
-        for index, mask_name in enumerate(self.mask.masks):
+        for index, mask in enumerate(self.mask.one_hot_masks.data[1:]):
+            mask_name = self.structures[index] if len(self.structures) > 0 else "mask_"+str(index)
             structure = {"ObservationNumber": str(index),
                          "ReferencedROINumber": str(index),
                          "ROIObservationLabel": mask_name,
@@ -199,15 +215,15 @@ class RTStruct:
                          "ROIInterpreter": "",
                          "ROIGenerationAlgorithm": "AUTOMATIC"
                          }
-            coordinates = self.mask.coordinates(mask_name)
+            coordinates = self.mask.coordinates(mask)
             coordinates.reverse()
             self.add_structure_to_dataset(structure, index, coordinates)
-            print(mask_name, " ", str(index + 1), "/", str(len(self.mask.masks)))
+            print(mask_name, "-", str(index + 1), "/", str(self.mask.one_hot_masks.data[1:].shape[0]))
 
     def save(self, name=None):
         """Save in dicom format.
         :param name: name of the file.
         :type name: str
         """
-        name = name or os.path.join(self.path, "RS.dcm")
+        name = name or self.output
         self.ds_rs.save_as(name, write_like_original=False)

@@ -2,47 +2,49 @@ import os
 
 import numpy as np
 import pydicom
-from PIL import Image
+import torchio as tio
 from natsort import natsorted
 from pydicom import dcmread
 from pydicom.tag import Tag
+from scipy import interpolate
 from skimage import morphology
 from skimage.measure import find_contours
-from scipy import interpolate
 
 
 class Mask:
     """
     Class that hold any structures aligned with a reference CT.
 
-    :param string path:
-        Root directory which includes a structures folder.
+    :param Union[string, :class:`tio.LABEL`] mask:
+        Path to the mask or Label.
+
+    :param string ct_path:
+        Path to the CT folder.
 
     :param List[pydicom.dataset.FileDataset] ds_cts:
         CT Dataset.
     """
 
-    def __init__(self, path, ds_cts=None):
-        self.path = path
-        self.masks_path = os.path.join(path, "masks")
-        self.masks = os.listdir(self.masks_path)
-        self.n_masks = len(self.masks)
-        # ToDo verify reverse
-        self.masks_files = natsorted([file for file in os.listdir(os.path.join(self.masks_path, self.masks[0]))
-                                      if file.endswith("png")], reverse=True)
+    def __init__(self, mask, ct_path=None, ds_cts=None):
 
-        self.ct_path = os.path.join(path, "ct")
-        self.ct_files = natsorted([os.path.join(self.ct_path, ct) for ct in os.listdir(self.ct_path)
-                                  if ct.endswith("dcm")])
+        if ct_path is None and ds_cts is None:
+            raise ValueError('At least ct_path should be provided')
+
+        self.masks = mask if not isinstance(mask, str) else tio.LabelMap(mask)
+        self.transform = tio.OneHot()
+        self.one_hot_masks = self.transform(self.masks)
+        self.n_masks = self.one_hot_masks.shape[0] - 1
+        self.ct_files = natsorted([os.path.join(ct_path, ct) for ct in os.listdir(ct_path)
+                                   if ct.endswith("dcm")])
         self.ds_ct = ds_cts or [dcmread(ct_file, force=True) for ct_file in self.ct_files]
 
-        self.n_slices = len(self.masks_files)
+        self.n_slices = self.one_hot_masks.spatial_shape[2]
 
         self.image_orientation_patient = list(self.get_dicom_value('ImageOrientationPatient', 0))
         self.pixel_spacing = list(self.get_dicom_value('PixelSpacing', 0))
 
     def __str__(self):
-        message = f"Structure(s): {', '.join(self.masks)}"
+        message = f"Structure(s): {str(self.masks)}"
         return message
 
     def get_dicom_value(self, tag, n_slice=0):
@@ -103,38 +105,34 @@ class Mask:
 
         return px, py, pz
 
-    def coordinates(self, mask_name):
+    def coordinates(self, mask):
         """Give the coordinates of the corresponding structures in the RCS and the SOP Instance UID.
 
-        :param mask_name: name of the structures.
-        :type mask_name: str
+        :param mask: mask.
+        :type mask: :class:`torch.Tensor`
         :return: List of ROI contour sequence.
         :rtype: list[(str,list[int])]
         """
+        mask = mask.numpy().astype(bool)
         referenced_contour_data = []
         self.ct_files.reverse()
-        for index, png in enumerate(self.masks_files):
-
-            img_obj = Image.open(os.path.join(self.masks_path, mask_name, png)).convert('I')
-            img_1d = np.array(list(img_obj.getdata()), bool)
-            img_3d = np.reshape(img_1d, (img_obj.height, img_obj.width))
+        for i in range(mask.shape[-1]):
             # removing holes using a large value to be sure all the holes are removed
-            img = morphology.remove_small_holes(img_3d, 100000, in_place=True)
-
+            img = morphology.remove_small_holes(mask[..., i], 100000, in_place=True)
             contours = find_contours(img)
             for contour in contours:
                 if len(contour):
                     x = np.array(contour[:, 1])
                     y = np.array(contour[:, 0])
-                    l = len(x)
-
+                    n_points = len(x)
                     # s is how much we want the spline to stick the points. If too high, interpolation 'moves away'
                     # from the real outline. If too small, it creates a crenellation
-                    tck, u = interpolate.splprep([x, y], per=True, s=l // 10)
-                    xi, yi = interpolate.splev(np.linspace(0, 1, 5 * l), tck)
+                    # ToDo check per=False
+                    tck = interpolate.splprep([x, y], per=True, s=n_points // 10.)
+                    xi, yi = interpolate.splev(tck[1], tck[0])
 
-                    contour = list(zip(xi,yi))
-                    image_position_patient = self.get_dicom_value('ImagePositionPatient', index)
+                    contour = list(zip(xi, yi))
+                    image_position_patient = self.get_dicom_value('ImagePositionPatient', i)
                     mask_coordinates = []
                     for coord in contour:
                         r, c = coord
@@ -142,6 +140,6 @@ class Mask:
                         mask_coordinates.append(round(x, 4))
                         mask_coordinates.append(round(y, 4))
                         mask_coordinates.append(round(z, 4))
-                    referenced_contour_data.append((self.ds_ct[index].SOPInstanceUID, mask_coordinates))
+                    referenced_contour_data.append((self.ds_ct[i].SOPInstanceUID, mask_coordinates))
 
         return referenced_contour_data

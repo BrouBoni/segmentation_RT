@@ -7,6 +7,14 @@ from dl.model.modules import ResnetGenerator
 
 
 def dice_loss(output, target):
+    """Dice Loss between two tensors.
+
+    :param output: input tensor.
+    :type output: :class:`torch.Tensor`
+    :param target: ground truth tensor.
+    :type target: :class:`torch.Tensor`
+    :return: dice loss.
+    """
     smooth = 1.
     loss = 0.
     for c in range(target.shape[1]):
@@ -20,6 +28,14 @@ def dice_loss(output, target):
 
 
 def dice_score(output, target):
+    """Dice Score between two tensors.
+
+        :param output: input tensor.
+        :type output: :class:`torch.Tensor`
+        :param target: ground truth tensor.
+        :type target: :class:`torch.Tensor`
+        :return: dice score.
+        """
     return 1 - dice_loss(output, target)
 
 

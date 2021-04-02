@@ -1,10 +1,25 @@
 import os
-import torchio as tio
+
 import torch
 import torch.utils.data as data
+import torchio as tio
+
+from util.util import get_subjects
 
 
 class DatasetSingle:
+    """Initialize a dataset suited inference.
+
+            :param str root:
+                root folder.
+
+            :param list[str] structures:
+                list of structures.
+
+            :param (int, int, int) patch_size:
+                Tuple of integers (width, height, depth).
+    """
+
     def __init__(self, root, structures, patch_size=(512, 512, 6)):
         self.root = root
         self.structures = structures
@@ -30,8 +45,36 @@ class DatasetSingle:
 
 
 class DatasetPatch:
-    def __init__(self, root, structures, ratio=0.9, crop_size=(256, 256, 6),
+    """Initialize a dataset suited for patch-based training.
+
+        :param str root:
+            root folder.
+
+        :param list[str] structures:
+            list of structures..
+
+        :param float ratio:
+            splitting ratio.
+
+        :param (int, int, int) patch_size:
+            Tuple of integers (width, height, depth).
+
+        :param int batch_size:
+            batch size.
+
+        :param int num_worker:
+            number of subprocesses to use for data loading..
+
+        :param int samples_per_volume:
+            number of patches to extract from each volume.
+
+        :param int max_length:
+            maximum number of patches that can be stored in the queue.
+        """
+
+    def __init__(self, root, structures, ratio=0.9, patch_size=(256, 256, 6),
                  batch_size=1, num_worker=2, samples_per_volume=20, max_length=200):
+
         self.root = root
         self.structures = structures
         self.n_structures = len(structures)
@@ -48,10 +91,15 @@ class DatasetPatch:
         self.training_subjects, self.validation_subjects = random_split(self.subjects, ratio)
         self.patches_training_set, self.patches_validation_set = queuing(self.training_subjects,
                                                                          self.validation_subjects,
-                                                                         crop_size, samples_per_volume,
+                                                                         patch_size, samples_per_volume,
                                                                          max_length, num_worker)
 
     def get_loaders(self):
+        """Return training and validation :class:`data.DataLoader`.
+
+        :return: training and validation DataLoader.
+        :rtype: (:class:`data.DataLoader`,:class:`data.DataLoader`)
+        """
         training_loader_patches = torch.utils.data.DataLoader(
             self.patches_training_set, batch_size=self.batch_size,
             drop_last=True)
@@ -66,28 +114,16 @@ class DatasetPatch:
         return training_loader_patches, validation_loader_patches
 
 
-def get_subjects(path, structures, transform):
-    subject_ids = os.listdir(path)
-    subjects = []
-    for subject_id in subject_ids:
-        ct_path = os.path.join(path, subject_id, 'ct.nii')
-        structures_path_dict = {k: os.path.join(path, subject_id, k + '.nii') for k in structures}
+def random_split(subjects, ratio=0.8):
+    """Randomly split a dataset into non-overlapping new datasets according to the ratio.
 
-        subject = tio.Subject(
-            ct=tio.ScalarImage(ct_path),
-        )
-        label_map = torch.zeros(subject["ct"].shape, dtype=torch.long)
-        for i, (k, v) in enumerate(structures_path_dict.items()):
-            label_map += tio.LabelMap(v).data * (i + 1)
-
-        label_map[label_map > len(structures)] = 0
-        subject.add_image(tio.LabelMap(tensor=label_map, affine=subject["ct"].affine), 'label_map')
-        subjects.append(subject)
-
-    return tio.SubjectsDataset(subjects, transform=transform)
-
-
-def random_split(subjects, ratio):
+    :param subjects: dataset to be split.
+    :type subjects: :class:`tio.SubjectsDataset`
+    :param ratio: splitting ratio.
+    :type ratio: float
+    :return: training and validation datasets.
+    :rtype: (:class:`tio.SubjectsDataset`, :class:`tio.SubjectsDataset`)
+    """
     num_subjects = len(subjects)
     num_training_subjects = int(ratio * num_subjects)
     num_validation_subjects = num_subjects - num_training_subjects
@@ -96,10 +132,27 @@ def random_split(subjects, ratio):
     return torch.utils.data.random_split(subjects, num_split_subjects)
 
 
-def queuing(training_subjects, validation_subjects, crop_size, samples_per_volume=10,
+def queuing(training_subjects, validation_subjects, patch_size, samples_per_volume=10,
             max_length=200, num_workers=2):
+    """Queue used for stochastic patch-based training.
+    See :class:`tio.data.Queue`.
 
-    sampler = tio.data.WeightedSampler(crop_size, 'label_map')
+    :param training_subjects: train dataset.
+    :type training_subjects: :class:`tio.SubjectsDataset`
+    :param validation_subjects: validation dataset.
+    :type validation_subjects: :class:`tio.SubjectsDataset`
+    :param patch_size: Tuple of integers (width, height, depth).
+    :type patch_size: (int, int, int)
+    :param samples_per_volume: number of patches to extract from each volume.
+    :type samples_per_volume: int
+    :param max_length: maximum number of patches that can be stored in the queue.
+    :type max_length: int
+    :param num_workers: number of subprocesses to use for data loading.
+    :type num_workers: int
+    :return: training and validation queue.
+    :rtype: (:class:`tio.data.Queue`, :class:`tio.data.Queue`)
+    """
+    sampler = tio.data.WeightedSampler(patch_size, 'label_map')
 
     patches_training_set = tio.Queue(
         subjects_dataset=training_subjects,
