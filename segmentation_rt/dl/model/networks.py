@@ -1,6 +1,5 @@
 import functools
 
-import torch
 import torch.nn as nn
 from segmentation_rt.dl.model.modules import ResnetGenerator
 

@@ -1,5 +1,18 @@
 segmentation_RT: Auto-segmentation Deep Learning Toolbox for radiotherapy
 =========================================================================
+|Documentation Status| |Build Status| |Coverage Status| |Codacy Badge|
+
+.. |Documentation Status| image:: https://readthedocs.org/projects/segmentation-rt/badge/?version=latest
+  :target: https://segmentation-rt.readthedocs.io/en/latest/?badge=latest
+
+.. |Build Status| image:: https://travis-ci.com/guilgautier/DPPy.svg?branch=master
+  :target: https://travis-ci.com/BrouBoni/segmentation_RT
+
+.. |Coverage Status| image:: https://coveralls.io/repos/github/BrouBoni/segmentation_RT/badge.svg?branch=main
+  :target: https://coveralls.io/github/BrouBoni/segmentation_RT?branch=main
+
+.. |Codacy Badge| image:: https://app.codacy.com/project/badge/Grade/443a2c7e654a4b819711f07ba5ef9ab2
+  :target: https://www.codacy.com/gh/BrouBoni/segmentation_RT/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=BrouBoni/segmentation_RT&amp;utm_campaign=Badge_Grade
 
 Introduction
 ------------

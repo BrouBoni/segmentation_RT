@@ -12,7 +12,8 @@
 #SBATCH --partition=gpu_p2
 # SBATCH --qos=qos_gpu-t4
 set -x
-cd $WORK/segmentation_RT
+# shellcheck disable=SC2164
+cd "$WORK/segmentation_RT"
 
 module purge
 module load pytorch-gpu/py3/1.7.1

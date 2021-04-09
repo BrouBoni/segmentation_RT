@@ -1,7 +1,7 @@
 import os
 
 import torch
-import torch.utils.data as data
+import torch.utils.data
 import torchio as tio
 
 from util.util import get_subjects

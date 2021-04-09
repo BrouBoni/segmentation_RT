@@ -152,7 +152,7 @@ class Model(object):
             epoch_start_time = time.time()
             epoch_iter = 0
 
-            for i, data in enumerate(train_dataset):
+            for data in train_dataset:
                 ct = data['ct'][tio.DATA].to(self.device)
                 mask = data['label_map'][tio.DATA].to(self.device)
                 ct = ct.transpose_(2, 4)
@@ -161,7 +161,7 @@ class Model(object):
                 epoch_iter += self.batch_size
 
                 if self.monitor_grad_norm:
-                    losses, visuals, grad_norms = self.train_instance(ct, mask)
+                    losses, visuals, _ = self.train_instance(ct, mask)
                 else:
                     losses, visuals = self.train_instance(ct, mask)
 

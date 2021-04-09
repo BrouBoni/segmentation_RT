@@ -1,7 +1,6 @@
 import os
 
 import numpy as np
-import pydicom
 import torchio as tio
 from natsort import natsorted
 from pydicom import dcmread

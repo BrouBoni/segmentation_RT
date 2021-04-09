@@ -1,7 +1,8 @@
 import shutil
 from unittest import TestCase
-
-from util.util import *
+import numpy as np
+import os
+from util.util import listdir_full_path, save_image
 
 
 class Test(TestCase):
@@ -10,8 +11,8 @@ class Test(TestCase):
         shutil.rmtree("saved_images", ignore_errors=True)
 
     def test_listdir_full_path(self):
-        full_path = ['tests/data/cheese_png/ct', 'tests/data/cheese_png/max.nii']
-        self.assertEqual(listdir_full_path('tests/data/cheese_png'), full_path)
+        full_path = ['tests/test_data/cheese_png/ct', 'tests/test_data/cheese_png/max.nii']
+        self.assertEqual(listdir_full_path('tests/test_data/cheese_png'), full_path)
 
     def test_save_image(self):
         array = np.arange(90, dtype=np.int16).reshape((3, 3, 10))

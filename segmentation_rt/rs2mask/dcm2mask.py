@@ -88,4 +88,4 @@ class Dataset:
 
             os.rename(os.path.join(nii_output, "image.nii"), os.path.join(nii_output, "ct.nii"))
 
-        print(f"Export done")
+        print("Export done")

@@ -76,7 +76,7 @@ class ResnetGenerator(nn.Module):
             nn.ReLU(True),
         ]
 
-        for i in range(n_blocks):
+        for _ in range(n_blocks):
             model += [ResnetBlock(4 * ngf, norm_layer=norm_layer,
                                   use_dropout=use_dropout, use_bias=True)]
 
