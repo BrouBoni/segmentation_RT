@@ -1,6 +1,10 @@
 segmentation_RT: Auto-segmentation Deep Learning Toolbox for radiotherapy
 =========================================================================
 
+.. image:: https://api.codacy.com/project/badge/Grade/9359d33f7baa4ba9943b1f539e455ff1
+   :alt: Codacy Badge
+   :target: https://app.codacy.com/gh/BrouBoni/segmentation_RT?utm_source=github.com&utm_medium=referral&utm_content=BrouBoni/segmentation_RT&utm_campaign=Badge_Grade_Settings
+
 Introduction
 ------------
 
