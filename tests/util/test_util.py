@@ -2,7 +2,7 @@ import shutil
 from unittest import TestCase
 import numpy as np
 import os
-from util.util import listdir_full_path, save_image
+from segmentation_rt.util.util import listdir_full_path, save_image
 
 
 class Test(TestCase):
