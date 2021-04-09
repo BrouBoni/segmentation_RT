@@ -21,7 +21,7 @@ segmentation_RT works with `Python 3.8 <http://docs.python.org/3/>`__.
 Dependencies
 ~~~~~~~~~~~~
 
-This project is based on `PyTorch 1.7.1 <https://pytorch.org>`__ and uses `TorchIO 0.18.29 <hhttps://torchio.readthedocs.io>`__.
+This project is based on `PyTorch 1.7.1 <https://pytorch.org>`__ and uses `TorchIO 0.18.29 <https://torchio.readthedocs.io>`__.
 
 How to use it
 -------------

@@ -1,7 +1,7 @@
 import shutil
 from unittest import TestCase
 
-from rs2mask.dcm2mask import Dataset
+from segmentation_rt.rs2mask.dcm2mask import Dataset
 
 TEST_IPP = 'tests/data/cheese_dcm'
 TEST_RS = 'tests/data/cheese_dcm/cheese_dcm_1/RS1.2.752.243.1.1.20210208111802158.1580.88111.dcm'

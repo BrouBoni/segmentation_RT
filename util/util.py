@@ -71,19 +71,18 @@ def listdir_full_path(path):
     return [os.path.join(path, f) for f in os.listdir(path)]
 
 
-def save_image(image, path, width=10, bit_depth=8, start=None, end=None):
-    """Save image from numpy array.
+def save_image(image, path, width=10, bitdepth=8, start=None, end=None, added_slices_step=5):
+    """
 
-    :param bit_depth: encoding.
-    :type bit_depth: int
     :param image: 3D npy array
-    :type image:
-    :param path: output folder.
-    :type path: str
-    :param start: first slice.
-    :type path: int
-    :param end: last slice.
-    :type path: int
+    :param bitdepth: encoding.
+    :param path: output folder (str)
+    :param width : number of kept slices before the first and after the last non empty slices
+    :param added_slices_step : the script saves slices from the first slice to the first non empty slices
+     with this step (same at the end). if this added_slices_step ==0 , no slices are saved.
+    :param start: first slice (default 0)
+    :param end: last slice (default -1)
+
     """
     if start and end:
         slicer = range(start, end)
@@ -110,7 +109,7 @@ def save_image(image, path, width=10, bit_depth=8, start=None, end=None):
     for i in slicer:
         filename = os.path.join(path, ipp + "_" + str(i))
         with open(filename + ".png", 'wb') as f:
-            writer = png.Writer(width=image.shape[0], height=image.shape[1], bitdepth=bit_depth, greyscale=True)
+            writer = png.Writer(width=image.shape[0], height=image.shape[1], bitdepth=bitdepth, greyscale=True)
             array = image[:, :, i].astype(np.uint16)
             array2list = array[:, :].tolist()
             writer.write(f, array2list)

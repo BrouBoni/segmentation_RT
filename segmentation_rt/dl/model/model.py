@@ -10,7 +10,7 @@ import torch
 import torchio as tio
 from torch.utils.tensorboard import SummaryWriter
 
-import dl.model.networks as networks
+import segmentation_rt.dl.model.networks as networks
 from util.util import print_log, format_log
 
 

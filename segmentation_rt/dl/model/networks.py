@@ -2,8 +2,7 @@ import functools
 
 import torch
 import torch.nn as nn
-
-from dl.model.modules import ResnetGenerator
+from segmentation_rt.dl.model.modules import ResnetGenerator
 
 
 def dice_loss(output, target):

@@ -2,7 +2,7 @@ from unittest import TestCase
 
 import torchio as tio
 
-from mask2rs.mask import Mask
+from segmentation_rt.mask2rs.mask import Mask
 
 TEST_CT_PATH = 'tests/data/cheese_png/ct'
 TEST_MASK = 'tests/data/cheese_png/max.nii'
