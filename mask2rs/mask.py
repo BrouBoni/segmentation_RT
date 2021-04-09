@@ -15,8 +15,8 @@ class Mask:
     """
     Class that hold any structures aligned with a reference CT.
 
-    :param Union[string, :class:`tio.LABEL`] mask:
-        Path to the mask or Label.
+    :param :class:`tio.LABEL` mask:
+        Path to the mask or a tio.Label.
 
     :param string ct_path:
         Path to the CT folder.
