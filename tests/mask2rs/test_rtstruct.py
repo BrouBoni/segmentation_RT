@@ -3,8 +3,8 @@ from unittest import TestCase
 
 from segmentation_rt.mask2rs.rtstruct import RTStruct
 
-TEST_ct = 'tests/data/cheese_png/ct/'
-TEST_mask = 'tests/data/cheese_png/max.nii'
+TEST_ct = 'tests/test_data/cheese_png/ct/'
+TEST_mask = 'tests/test_data/cheese_png/max.nii'
 
 
 class TestRTStruct(TestCase):

@@ -3,9 +3,8 @@ from unittest import TestCase
 
 from segmentation_rt.rs2mask.dcm2mask import Dataset
 
-TEST_IPP = 'tests/data/cheese_dcm'
-TEST_RS = 'tests/data/cheese_dcm/cheese_dcm_1/RS1.2.752.243.1.1.20210208111802158.1580.88111.dcm'
-TEST_NII = 'tests/data/ct.nii'
+TEST_IPP = 'tests/test_data/cheese_dcm'
+TEST_RS = 'tests/test_data/cheese_dcm/cheese_dcm_1/RS1.2.752.243.1.1.20210208111802158.1580.88111.dcm'
 
 
 class TestDataset(TestCase):

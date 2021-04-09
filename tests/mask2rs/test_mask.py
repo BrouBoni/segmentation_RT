@@ -4,8 +4,8 @@ import torchio as tio
 
 from segmentation_rt.mask2rs.mask import Mask
 
-TEST_CT_PATH = 'tests/data/cheese_png/ct'
-TEST_MASK = 'tests/data/cheese_png/max.nii'
+TEST_CT_PATH = 'tests/test_data/cheese_png/ct'
+TEST_MASK = 'tests/test_data/cheese_png/max.nii'
 
 
 class TestMask(TestCase):
@@ -21,4 +21,4 @@ class TestMask(TestCase):
 
     def test_coordinate(self):
         mask = tio.LabelMap(TEST_MASK)
-        self.assertEqual(85, len(self.mask.coordinates(mask.data[0])))
+        self.assertEqual(6, len(self.mask.coordinates(mask.data[0])))
