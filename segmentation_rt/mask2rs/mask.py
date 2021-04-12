@@ -14,7 +14,7 @@ class Mask:
     """
     Class that hold any structures aligned with a reference CT.
 
-    :param :class:`tio.LABEL` mask:
+    :param tio.LABEL mask:
         Path to the mask or a tio.Label.
 
     :param string ct_path:
@@ -47,7 +47,8 @@ class Mask:
         return message
 
     def get_dicom_value(self, tag, n_slice=0):
-        """ Return a dicom tag value.
+        """
+        Return a dicom tag value.
 
         :param tag: Dicom tag in keyword format.
         :type tag: string
@@ -59,7 +60,8 @@ class Mask:
         return self.ds_ct[n_slice][Tag(tag)].value
 
     def coordinate_mapping(self, c, r, image_position_patient):
-        """The mapping of pixel location (c,r) to Reference Coordinate System (RCS).
+        """
+        The mapping of pixel location (c,r) to Reference Coordinate System (RCS).
 
         :param c: column.
         :type c: float
@@ -105,7 +107,8 @@ class Mask:
         return px, py, pz
 
     def coordinates(self, mask):
-        """Give the coordinates of the corresponding structures in the RCS and the SOP Instance UID.
+        """
+        Give the coordinates of the corresponding structures in the RCS and the SOP Instance UID.
 
         :param mask: mask.
         :type mask: :class:`torch.Tensor`

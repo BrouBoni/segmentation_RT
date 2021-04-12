@@ -24,7 +24,7 @@ class RTStruct:
     :param string ct_path:
         Path to the CT folder.
 
-    :param Union[string, :class:`tio.LABEL`] mask:
+    :param Union[str, tio.LABEL] mask:
         Path to the CT folder.
 
     :param list[str] structures:
@@ -122,14 +122,14 @@ class RTStruct:
             contour_image_sequence.ReferencedSOPInstanceUID = sop_instance_uid
 
     def init_sequence(self):
-        """Initialize a new sequence.
-        """
+        """Initialize a new sequence."""
         self.ds_rs.RTROIObservationsSequence.append(Dataset())
         self.ds_rs.StructureSetROISequence.append(Dataset())
         self.ds_rs.ROIContourSequence.append(Dataset())
 
     def add_roi_observation_sequence(self, structure, index):
-        """Add a sequence to the RT ROI Observations Module.
+        """
+        Add a sequence to the RT ROI Observations Module.
 
         :param structure: dict containing structure information.
         :type structure: dict[str, str]
@@ -144,7 +144,8 @@ class RTStruct:
         roi_observation_sequence.ROIInterpreter = structure["ROIInterpreter"]
 
     def add_structure_set_roi_sequence(self, structure, index):
-        """Add a sequence to the Structure Set Module.
+        """
+        Add a sequence to the Structure Set Module.
 
         :param structure: dict containing structure information.
         :type structure: dict[str, str]
@@ -158,7 +159,8 @@ class RTStruct:
         structure_set_roi_sequence.ROIGenerationAlgorithm = structure["ROIGenerationAlgorithm"]
 
     def add_roi_contour_sequence(self, structure, index, coordinates):
-        """Add a sequence to the ROI Contour Module.
+        """
+        Add a sequence to the ROI Contour Module.
 
         :param structure: dict containing structure information.
         :type structure: dict[str, str]
@@ -189,7 +191,8 @@ class RTStruct:
             contour_image_sequence.ReferencedSOPInstanceUID = sop_instance_uid
 
     def add_structure_to_dataset(self, structure, index, coordinates):
-        """Add a structure set to the dataset.
+        """
+        Add a structure set to the dataset.
 
         :param structure: dict containing structure information.
         :type structure: dict[str, str]
@@ -221,7 +224,9 @@ class RTStruct:
             print(mask_name, "-", str(index + 1), "/", str(self.mask.one_hot_masks.data[1:].shape[0]))
 
     def save(self, name=None):
-        """Save in dicom format.
+        """
+        Save in dicom format.
+
         :param name: name of the file.
         :type name: str
         """

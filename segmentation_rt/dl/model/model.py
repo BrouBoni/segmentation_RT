@@ -15,7 +15,8 @@ from util.util import print_log, format_log
 
 
 class Model(object):
-    """Initialize chosen model with parameters.
+    """
+    Initialize chosen model with parameters.
     This class allows the training of the networks and afterward for testing.
 
     Only resnet available, more coming soon.
@@ -123,7 +124,8 @@ class Model(object):
                 nets_f.flush()
 
     def train(self, train_dataset, test_dataset=None):
-        """Train the model with a dataset.
+        """
+        Train the model with a dataset.
 
         :param train_dataset: training dataset.
         :type train_dataset: :class:`DataLoader`
@@ -198,7 +200,8 @@ class Model(object):
         tensorbard_writer.close()
 
     def train_instance(self, ct, segmentation):
-        """Training instance (batch).
+        """
+        Training instance (batch).
 
         :param ct: input tensor.
         :type ct: Tensor
@@ -226,7 +229,7 @@ class Model(object):
         return losses, visuals
 
     def update_learning_rate(self):
-        """Update learning rate"""
+        """Update learning rate."""
         lrd = self.lr / self.niter_decay
         lr = self.old_lr - lrd
         for param_group in self.optimizer_G.param_groups:
@@ -236,7 +239,8 @@ class Model(object):
         self.old_lr = lr
 
     def save(self, checkpoint_name):
-        """Save the model and optimizer.
+        """
+        Save the model and optimizer.
 
         :param checkpoint_name: name of the checkpoint.
         :type checkpoint_name: str
@@ -249,7 +253,8 @@ class Model(object):
         torch.save(checkpoint, checkpoint_path)
 
     def load(self, checkpoint_path, optimizer=False):
-        """Loads an object saved with torch.save from a file.
+        """
+        Loads an object saved with torch.save from a file.
 
         :param checkpoint_path: path to the checkpoint.
         :type checkpoint_path: str
@@ -267,7 +272,8 @@ class Model(object):
         self.netG.eval()
 
     def visualize_training(self, visuals, affine, epoch, index):
-        """Save training image for visualization.
+        """
+        Save training image for visualization.
 
         :param affine:
         :param visuals: images.
@@ -306,7 +312,8 @@ class Model(object):
         print_log(options_file, '-------------- End ----------------')
 
     def eval_dice(self, dataset):
-        """Evaluation metric using MAE.
+        """
+        Evaluation metric using MAE.
 
         :param dataset: training dataset.
         :type dataset: :class:`DataLoader`
@@ -325,7 +332,8 @@ class Model(object):
         return np.mean(dice)
 
     def test(self, dataset, export_path=None, checkpoint=None, save=False):
-        """Model prediction for a SingleDataset.
+        """
+        Model prediction for a SingleDataset.
 
         :param dataset: training dataset.
         :type dataset: :class:`DataLoader`

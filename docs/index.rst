@@ -17,13 +17,10 @@ provided to do so:
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
    :caption: Contents:
 
-   rs2mask/modules
-   mask2rs/modules
-   dl/modules
-   util/modules
+   source/modules
 
 
 Indices and tables

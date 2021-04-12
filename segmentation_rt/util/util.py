@@ -7,7 +7,8 @@ import torchio as tio
 
 
 def print_log(out_f, message):
-    """Writes in log file.
+    """
+    Writes in log file.
 
     :param out_f: I/O stream.
     :type out_f:
@@ -20,7 +21,8 @@ def print_log(out_f, message):
 
 
 def format_log(epoch, iteration, errors, t, prefix=True):
-    """Generic format for print/log.
+    """
+    Generic format for print/log.
 
     :param epoch: epoch.
     :type epoch: int
@@ -44,7 +46,8 @@ def format_log(epoch, iteration, errors, t, prefix=True):
 
 
 def listdir_full_path(path):
-    """List files in path and return their absolute path.
+    """
+    List files in path and return their absolute path.
 
     :param path: path.
     :type path: str
@@ -56,6 +59,7 @@ def listdir_full_path(path):
 
 def save_image(image, path, width=10, bitdepth=8, start=None, end=None, added_slices_step=5):
     """
+    Save image in png format.
 
     :param image: 3D npy array
     :param bitdepth: encoding.
@@ -99,7 +103,8 @@ def save_image(image, path, width=10, bitdepth=8, start=None, end=None, added_sl
 
 
 def get_subjects(path, structures, transform):
-    """Browse the path folder to build a dataset. Folder must contains Subjects with the CT and masks.
+    """
+    Browse the path folder to build a dataset. Folder must contains Subjects with the CT and masks.
 
     :param path: root folder.
     :type path: str

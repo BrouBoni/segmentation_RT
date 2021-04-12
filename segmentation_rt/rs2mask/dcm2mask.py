@@ -16,7 +16,6 @@ class Dataset:
 
     :param List[string] structures:
         List of desired structure(s).
-
     """
 
     def __init__(self, path, export_path, structures):
@@ -37,7 +36,8 @@ class Dataset:
         return self.dataset_name
 
     def get_rs(self):
-        """List RT Structure file for each patient.
+        """
+        List RT Structure file for each patient.
 
         :rtype: list[str]
         """
@@ -50,7 +50,8 @@ class Dataset:
         return rs_paths
 
     def find_structures(self, index):
-        """List missing and not missing structures in a RT Structure file.
+        """
+        List missing and not missing structures in a RT Structure file.
 
         :param index: index of the patient.
         :type index: int

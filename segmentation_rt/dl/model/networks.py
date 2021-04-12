@@ -1,11 +1,11 @@
 import functools
 
 import torch.nn as nn
-from segmentation_rt.dl.model.modules import ResnetGenerator
 
 
 def dice_loss(output, target):
-    """Dice Loss between two tensors.
+    """
+    Dice Loss between two tensors.
 
     :param output: input tensor.
     :type output: :class:`torch.Tensor`
@@ -16,17 +16,18 @@ def dice_loss(output, target):
     smooth = 1.
     loss = 0.
     for c in range(target.shape[1]):
-        oflat = output[:, c].contiguous().view(-1)
-        tflat = target[:, c].contiguous().view(-1)
-        intersection = (oflat * tflat).sum()
+        output_flat = output[:, c].contiguous().view(-1)
+        target_flat = target[:, c].contiguous().view(-1)
+        intersection = (output_flat * target_flat).sum()
         loss += 1. - ((2. * intersection + smooth) /
-                      (oflat.sum() + tflat.sum() + smooth))
+                      (output_flat.sum() + target_flat.sum() + smooth))
 
     return loss / target.shape[1]
 
 
 def dice_score(output, target):
-    """Dice Score between two tensors.
+    """
+    Dice Score between two tensors.
 
         :param output: input tensor.
         :type output: :class:`torch.Tensor`
@@ -38,7 +39,8 @@ def dice_score(output, target):
 
 
 def weights_init(m):
-    """Initialize network weights.
+    """
+    Initialize network weights.
 
     :param m: Module
     :type m: :class:`torch.nn.Module`
@@ -53,9 +55,148 @@ def weights_init(m):
         m.bias.data.fill_(0)
 
 
+def build_conv_block(dim, norm_layer, use_dropout, use_bias):
+    """
+    Construct a convolutional block.
+
+    :param dim: the number of channels in the conv layer.
+    :type dim: int
+    :param norm_layer: normalization layer.
+    :type norm_layer: :class:`nn.Module`
+    :param use_dropout: if use dropout layers.
+    :type use_dropout: bool
+    :param use_bias: if the conv layer uses bias or not
+    :type use_bias: bool
+    :return: Returns a conv block (with a conv layer, a normalization layer, and a non-linearity layer (ReLU))
+    :rtype: :class:`nn.Sequential`
+    """
+    conv_block = []
+    conv_block += [nn.ReplicationPad3d(1)]
+    conv_block += [nn.Conv3d(dim, dim, kernel_size=3, bias=use_bias)]
+    conv_block += [nn.ReLU(True)]
+
+    if use_dropout:
+        conv_block += [nn.Dropout(0.5)]
+
+    conv_block += [nn.ReplicationPad3d(1)]
+    conv_block += [nn.Conv3d(dim, dim, kernel_size=3, bias=use_bias)]
+    conv_block += [norm_layer(dim)]
+
+    return nn.Sequential(*conv_block)
+
+
+class ResnetGenerator(nn.Module):
+    """
+    Resnet-based generator that consists of Resnet blocks between a few downscaling/up-sampling operations.
+
+    :param int input_nc:
+        the number of channels in input images.
+
+    :param int output_nc:
+        the number of channels in output images.
+
+    :param int ngf:
+        the number of filters in the last conv layer.
+
+    :param int n_blocks:
+        the number of ResNet blocks.
+
+    :param norm_layer:
+        normalization layer.
+
+    :param bool use_dropout:
+        if use dropout layers.
+    """
+
+    def __init__(self, input_nc, output_nc, ngf=64, n_blocks=9,
+                 norm_layer=functools.partial(nn.BatchNorm3d, affine=True),
+                 use_dropout=False):
+
+        super(ResnetGenerator, self).__init__()
+
+        model = [
+            nn.ReplicationPad3d(3),
+            nn.Conv3d(input_nc, ngf, kernel_size=7, padding=0, stride=1, bias=True),
+            norm_layer(ngf),
+            nn.ReLU(True),
+
+            nn.Conv3d(ngf, 2 * ngf, kernel_size=3, padding=1, stride=1, bias=True),
+            norm_layer(2 * ngf),
+            nn.ReLU(True),
+
+            nn.Conv3d(2 * ngf, 4 * ngf, kernel_size=3, padding=1, stride=2, bias=True),
+            norm_layer(4 * ngf),
+            nn.ReLU(True),
+        ]
+
+        for _ in range(n_blocks):
+            model += [ResnetBlock(4 * ngf, norm_layer=norm_layer,
+                                  use_dropout=use_dropout, use_bias=True)]
+
+        model += [
+
+            nn.ConvTranspose3d(4 * ngf, 2 * ngf,
+                               kernel_size=3, stride=2,
+                               padding=1, output_padding=1,
+                               bias=True),
+            norm_layer(2 * ngf),
+            nn.ReLU(True),
+
+            nn.Conv3d(2 * ngf, ngf, kernel_size=3, padding=1, bias=True),
+            norm_layer(ngf),
+            nn.ReLU(True),
+
+            nn.Conv3d(ngf, output_nc, kernel_size=7, padding=3),
+        ]
+
+        self.model = nn.Sequential(*model)
+
+    def forward(self, x):
+        """Standard forward"""
+        return self.model(x)
+
+    def __str__(self):
+        return "ResnetGenerator"
+
+
+class ResnetBlock(nn.Module):
+    """
+    Initialize the Resnet block.
+
+    A resnet block is a conv block with skip connections
+    We construct a conv block with build_conv_block function,
+    and implement skip connections in <forward> function.
+    Original Resnet paper: https://arxiv.org/pdf/1512.03385.pdf.
+
+     :param int dim:
+        the number of channels in the conv layer.
+
+    :param norm_layer:
+        normalization layer.
+
+    :param bool use_dropout:
+        if use dropout layers.
+
+    :param bool use_bias:
+        if use bias.
+    """
+
+    def __init__(self, dim, norm_layer, use_dropout, use_bias):
+        super(ResnetBlock, self).__init__()
+        self.conv_block = build_conv_block(dim, norm_layer, use_dropout, use_bias)
+        self.relu = nn.ReLU(True)
+
+    def forward(self, x):
+        """Standard forward."""
+        out = self.conv_block(x)
+        out = self.relu(x + out)
+        return out
+
+
 def define_generator(input_nc, output_nc, ngf, n_blocks, device,
                      use_dropout=False):
-    """Create a generator.
+    """
+    Create a generator.
 
     :param input_nc: the number of channels in input images.
     :type input_nc: int
@@ -84,7 +225,8 @@ def define_generator(input_nc, output_nc, ngf, n_blocks, device,
 
 
 def print_network(net, out_f=None):
-    """Prints the number of learnable parameters.
+    """
+    Prints the number of learnable parameters.
 
     :param net: the network.
     :type net:

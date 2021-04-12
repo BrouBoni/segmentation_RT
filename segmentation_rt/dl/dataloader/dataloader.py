@@ -8,7 +8,8 @@ from util.util import get_subjects
 
 
 class DatasetSingle:
-    """Initialize a dataset suited inference.
+    """
+    Initialize a dataset suited inference.
 
             :param str root:
                 root folder.
@@ -45,7 +46,8 @@ class DatasetSingle:
 
 
 class DatasetPatch:
-    """Initialize a dataset suited for patch-based training.
+    """
+    Initialize a dataset suited for patch-based training.
 
         :param str root:
             root folder.
@@ -95,7 +97,8 @@ class DatasetPatch:
                                                                          max_length, num_worker)
 
     def get_loaders(self):
-        """Return training and validation :class:`data.DataLoader`.
+        """
+        Return training and validation :class:`data.DataLoader`.
 
         :return: training and validation DataLoader.
         :rtype: (:class:`data.DataLoader`,:class:`data.DataLoader`)
@@ -115,7 +118,8 @@ class DatasetPatch:
 
 
 def random_split(subjects, ratio=0.8):
-    """Randomly split a dataset into non-overlapping new datasets according to the ratio.
+    """
+    Randomly split a dataset into non-overlapping new datasets according to the ratio.
 
     :param subjects: dataset to be split.
     :type subjects: :class:`tio.SubjectsDataset`
@@ -134,7 +138,9 @@ def random_split(subjects, ratio=0.8):
 
 def queuing(training_subjects, validation_subjects, patch_size, samples_per_volume=10,
             max_length=200, num_workers=2):
-    """Queue used for stochastic patch-based training.
+    """
+    Queue used for stochastic patch-based training.
+
     See :class:`tio.data.Queue`.
 
     :param training_subjects: train dataset.
