@@ -12,17 +12,15 @@ The purpose of segmentation_RT is to provide a quick method to use deep learning
 provided to do so:
 
    - :ref:`rs2mask <rs2mask>`: create a dataset from dicom data
-   - dl: deep learning module for training and testing
+   - :ref:`dl <dl>`: deep learning module for training and testing
    - :ref:`mask2rs <mask2rs>`: create RT Structure Set from mask.
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
    :caption: Contents:
 
-   rs2mask/modules
-   mask2rs/modules
-   dl/modules
+   source/modules
 
 
 Indices and tables

@@ -1,42 +1,39 @@
 import os
 
-from dl.dataloader.dataloader import DataLoader
-from dl.model.model import Model
-# from mask2rs.rtstruct import RTStruct
-from rs2mask.dcm2mask import Dataset
+from segmentation_rt.dl.dataloader.dataloader import DatasetPatch, DatasetSingle
+from segmentation_rt.dl.model.model import Model
+from segmentation_rt.mask2rs.rtstruct import RTStruct
+from segmentation_rt.rs2mask.dcm2mask import Dataset
 
 if __name__ == '__main__':
 
     # dataset
-    mask_name = "Coeur"
-    # dataset = Dataset('data/XL', 'XL_data_trachee', [mask_name])
-    # dataset.make_png()
-    # dataset.sort_dataset(ratio=0.9, export_path='datasets', structure=mask_name)
+    structures = ["Coeur", "Sein G", "Sein D"]
+    dataset = Dataset('data/data', 'data/DIBH_dataset', structures)
+    dataset.make()
 
     # training
-    # root_training = 'datasets/XL_data_trachee/'
+    root_training = 'data/DIBH_dataset/'
     checkpoints_dir = 'checkpoints/'
-    name = 'seg_coeur'
-    # expr_dir = os.path.join(checkpoints_dir, name)
-    # train_data_loader = DataLoader(root_training, mask_name, subset='training', batch_size=4, crop_size=256,
-    #                                drop_last=True, num_workers=2)
-    # train_dataset = train_data_loader.load_data()
-    # test_data_loader = DataLoader(root_training, mask_name, subset='testing', batch_size=1, drop_last=True,
-    #                               num_workers=2)
-    # test_dataset = test_data_loader.load_data()
-    # model = Model(expr_dir, n_blocks=9, niter=100, niter_decay=100)
-    # model.train(train_dataset, test_dataset)
+    name = 'DIBH'
+
+    expr_dir = os.path.join(checkpoints_dir, name)
+    dataset = DatasetPatch(root_training, structures, 0.9, batch_size=4)
+    training_loader_patches, validation_loader_patches = dataset.get_loaders()
+    model = Model(expr_dir, structures, n_blocks=9, niter=150, niter_decay=50)
+    model.train(training_loader_patches, validation_loader_patches)
 
     # testing
     expr_dir = os.path.join(checkpoints_dir, name)
-    model = Model(expr_dir, n_blocks=9)
-    root_prediction = 'prediction/ct/'
-    pred_data_loader = DataLoader(root_prediction, mask_name, subset='prediction', batch_size=1, drop_last=True)
-    pred_dataset = pred_data_loader.load_data()
-    model.test(pred_dataset, 'prediction/masks/coeur')
+    model = Model(expr_dir, structures,  n_blocks=9)
+    root_prediction = 'prediction/'
+    pred_data_loader = DatasetSingle(root_prediction, structures)
+    fake_segmentation = model.test(pred_data_loader, export_path='prediction/143012/', save=True)
 
     # rtstruct
-    # data = os.path.join('prediction')
-    # struct = RTStruct(data)
-    # struct.create()
-    # struct.save()
+    ct_path = os.path.join('prediction/143012/ct/')
+    mask = os.path.join('prediction/143012/nii/fake_segmentation.nii')
+
+    struct = RTStruct(ct_path, mask, structures)
+    struct.create()
+    struct.save()
