@@ -1,5 +1,3 @@
-.. _dl:
-
 segmentation\_rt.dl package
 ===========================
 

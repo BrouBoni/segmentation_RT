@@ -1,5 +1,3 @@
-.. _rs2mask:
-
 segmentation\_rt.rs2mask package
 ================================
 

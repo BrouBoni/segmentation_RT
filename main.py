@@ -32,7 +32,7 @@ if __name__ == '__main__':
 
     # rtstruct
     ct_path = os.path.join('prediction/143012/ct/')
-    mask = os.path.join('prediction/143012/nii/fake_segmentation.nii')
+    mask = os.path.join('prediction/143012/fake_segmentation.nii')
 
     struct = RTStruct(ct_path, mask, structures)
     struct.create()
