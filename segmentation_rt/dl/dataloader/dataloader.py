@@ -4,7 +4,7 @@ import torch
 import torch.utils.data
 import torchio as tio
 
-from util.util import get_subjects
+from segmentation_rt.util.util import get_subjects
 
 
 class DatasetSingle:
@@ -74,8 +74,8 @@ class DatasetPatch:
             maximum number of patches that can be stored in the queue.
         """
 
-    def __init__(self, root, structures, ratio=0.9, patch_size=(256, 256, 6),
-                 batch_size=1, num_worker=2, samples_per_volume=20, max_length=200):
+    def __init__(self, root, structures, ratio=0.9, patch_size=(384, 384, 8),
+                 batch_size=1, num_worker=2, samples_per_volume=40, max_length=400):
 
         self.root = root
         self.structures = structures
