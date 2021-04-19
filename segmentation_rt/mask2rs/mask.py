@@ -23,12 +23,13 @@ class Mask:
         CT Dataset.
     """
 
-    def __init__(self, mask, ct_path=None, ds_cts=None):
+    def __init__(self, mask, ct_path=None, ds_cts=None, structures=None):
 
         if ct_path is None and ds_cts is None:
             raise ValueError('At least ct_path should be provided')
 
         self.masks = mask if not isinstance(mask, str) else tio.LabelMap(mask)
+        self.structures = structures
         self.masks_itk = self.masks.as_sitk()
         self.transform = tio.OneHot()
         self.one_hot_masks = self.transform(self.masks)
@@ -36,10 +37,7 @@ class Mask:
         self.ct_files = natsorted([os.path.join(ct_path, ct) for ct in os.listdir(ct_path)
                                    if ct.endswith("dcm")])
         self.ds_ct = ds_cts or [dcmread(ct_file, force=True) for ct_file in self.ct_files]
-
-    def __str__(self):
-        message = f"Structure(s): {str(self.masks)}"
-        return message
+        self.ds_ct.reverse()
 
     def coordinates(self, mask):
         """
@@ -52,7 +50,6 @@ class Mask:
         """
         mask = mask.numpy().astype(bool)
         referenced_contour_data = []
-        self.ds_ct.reverse()
         for s in range(mask.shape[-1]):
             # removing holes using a large value to be sure all the holes are removed
             img = morphology.remove_small_holes(mask[..., s], 100000, in_place=True)
@@ -66,7 +63,7 @@ class Mask:
                     # from the real outline. If too small, it creates a crenellation
                     # ToDo check per=False
                     if n_points > 3:
-                        tck = interpolate.splprep([x, y], per=True, s=n_points // 10.)
+                        tck = interpolate.splprep([x, y], per=True, s=n_points // 10., quiet=2)
                         xi, yi = interpolate.splev(tck[1], tck[0])
 
                         contour = list(zip(xi, yi))

@@ -15,3 +15,8 @@ class TestMask(TestCase):
     def test_coordinate(self):
         mask = tio.LabelMap(TEST_MASK)
         self.assertEqual(6, len(self.mask.coordinates(mask.data[0])))
+
+    def test_constructor(self):
+        with self.assertRaises(ValueError) as cm:
+            mask = Mask(TEST_MASK)
+        self.assertEqual('At least ct_path should be provided', str(cm.exception))
