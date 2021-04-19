@@ -11,6 +11,7 @@ class TestRTStruct(TestCase):
 
     def setUp(self):
         self.rtstruct = RTStruct(TEST_ct, TEST_mask)
+
         self.structure = {"ObservationNumber": "0",
                           "ReferencedROINumber": "0",
                           "ROIObservationLabel": "mask_0",
@@ -18,6 +19,10 @@ class TestRTStruct(TestCase):
                           "ROIInterpreter": "",
                           "ROIGenerationAlgorithm": "AUTOMATIC"
                           }
+
+    def test_modality(self):
+        modality = str(self.rtstruct)
+        self.assertEqual(str(modality), 'RTSTRUCT')
 
     def test_init_sequence(self):
         roi_observation_sequence = len(self.rtstruct.ds_rs.RTROIObservationsSequence)
@@ -58,6 +63,21 @@ class TestRTStruct(TestCase):
 
         self.assertEqual(str(self.rtstruct.ds_rs.ROIContourSequence[0].ReferencedROINumber), "0")
         self.assertEqual(len(self.rtstruct.ds_rs.ROIContourSequence[0].ContourSequence[0]), 5)
+
+    def test_add_structure_to_dataset(self):
+        coordinates = self.rtstruct.mask.coordinates(self.rtstruct.mask.one_hot_masks.data[1])
+        self.rtstruct.add_structure_to_dataset(self.structure, 0, coordinates)
+        roi_observation_sequence = len(self.rtstruct.ds_rs.RTROIObservationsSequence)
+        structure_set_roi_sequence = len(self.rtstruct.ds_rs.StructureSetROISequence)
+        roi_contour_sequence = len(self.rtstruct.ds_rs.ROIContourSequence)
+        self.assertEqual([roi_observation_sequence, structure_set_roi_sequence, roi_contour_sequence], [1, 1, 1])
+
+    def test_create(self):
+        self.rtstruct.create()
+        roi_observation_sequence = len(self.rtstruct.ds_rs.RTROIObservationsSequence)
+        structure_set_roi_sequence = len(self.rtstruct.ds_rs.StructureSetROISequence)
+        roi_contour_sequence = len(self.rtstruct.ds_rs.ROIContourSequence)
+        self.assertEqual([roi_observation_sequence, structure_set_roi_sequence, roi_contour_sequence], [1, 1, 1])
 
     def test_save(self):
         save_path = "RS.dcm"

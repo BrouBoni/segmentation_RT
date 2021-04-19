@@ -30,8 +30,6 @@ class Dataset:
         self.patient_paths = [os.path.join(self.path, patient) for patient in self.patients]
         self.rs_paths = self.get_rs()
 
-        self.path_dataset = os.path.join(self.root_path, self.dataset_name)
-
     def __str__(self):
         return self.dataset_name
 
