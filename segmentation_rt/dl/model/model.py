@@ -11,7 +11,7 @@ import torchio as tio
 from torch.utils.tensorboard import SummaryWriter
 
 import segmentation_rt.dl.model.networks as networks
-from util.util import print_log, format_log
+from segmentation_rt.util.util import print_log, format_log
 
 
 class Model(object):
