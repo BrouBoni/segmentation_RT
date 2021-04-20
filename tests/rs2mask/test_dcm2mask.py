@@ -1,5 +1,5 @@
-import shutil
 import os
+import shutil
 from unittest import TestCase
 
 from segmentation_rt.rs2mask.dcm2mask import Dataset

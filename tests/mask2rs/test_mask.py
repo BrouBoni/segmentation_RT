@@ -18,5 +18,5 @@ class TestMask(TestCase):
 
     def test_constructor(self):
         with self.assertRaises(ValueError) as cm:
-            mask = Mask(TEST_MASK)
+            _ = Mask(TEST_MASK)
         self.assertEqual('At least ct_path should be provided', str(cm.exception))
