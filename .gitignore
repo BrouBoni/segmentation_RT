@@ -147,3 +147,4 @@ __pycache__/
 /docs/_build/
 /prediction/
 /checkpoints/
+/data/
