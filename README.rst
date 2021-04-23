@@ -1,4 +1,4 @@
-segmentation_RT: Auto-segmentation Deep Learning Toolbox for radiotherapy
+segmentation_RT: Deep Learning Segmentation Toolbox for radiotherapy
 =========================================================================
 |Documentation Status| |Build Status| |Coverage Status| |Codacy Badge|
 
@@ -40,5 +40,4 @@ How to use it
 -------------
 
 The main segmentation_RT documentation is available online at `http://segmentation_RT.readthedocs.io <http://segmentation_RT.readthedocs.io>`_.
-There are also an main example available at https://github.com/BrouBoni/segmentation_RT/blob/main/main.py.
-For more details, check below.
+There are also an main example available at https://github.com/BrouBoni/segmentation_RT/blob/main/main.py showing the interactions between the modules.
