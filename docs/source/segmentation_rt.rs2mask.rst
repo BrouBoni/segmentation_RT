@@ -1,21 +1,11 @@
-segmentation\_rt.rs2mask package
+rs2mask
 ================================
 
-Submodules
-----------
+.. currentmodule:: segmentation_rt.rs2mask.rs2mask
 
-segmentation\_rt.rs2mask.dcm2mask module
-----------------------------------------
+:class:`Dataset`
+------------------------
 
-.. automodule:: segmentation_rt.rs2mask.dcm2mask
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: segmentation_rt.rs2mask
-   :members:
-   :undoc-members:
-   :show-inheritance:
+.. autoclass:: Dataset
+    :members:
+    :show-inheritance:

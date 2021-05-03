@@ -1,10 +1,10 @@
-segmentation\_rt.dl.model package
+model
 =================================
 
 Submodules
 ----------
 
-segmentation\_rt.dl.model.model module
+model
 --------------------------------------
 
 .. automodule:: segmentation_rt.dl.model.model
@@ -12,18 +12,10 @@ segmentation\_rt.dl.model.model module
    :undoc-members:
    :show-inheritance:
 
-segmentation\_rt.dl.model.networks module
+networks
 -----------------------------------------
 
 .. automodule:: segmentation_rt.dl.model.networks
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: segmentation_rt.dl.model
    :members:
    :undoc-members:
    :show-inheritance:

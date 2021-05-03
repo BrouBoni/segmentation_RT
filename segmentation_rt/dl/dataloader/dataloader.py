@@ -74,7 +74,7 @@ class DatasetPatch:
             maximum number of patches that can be stored in the queue.
         """
 
-    def __init__(self, root, structures, ratio=0.9, patch_size=(384, 384, 8),
+    def __init__(self, root, structures, ratio=0.9, patch_size=(384, 384, 6),
                  batch_size=1, num_worker=2, samples_per_volume=40, max_length=400):
 
         self.root = root

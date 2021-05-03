@@ -2,7 +2,7 @@ import os
 import shutil
 from unittest import TestCase
 
-from segmentation_rt.rs2mask.dcm2mask import Dataset
+from segmentation_rt.rs2mask.rs2mask import Dataset
 
 TEST_IPP = 'tests/test_data/cheese_dcm'
 TEST_EXPORT = 'tests/test_data/dataset_cheese'

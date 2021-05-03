@@ -6,7 +6,15 @@ from dcmrtstruct2nii import dcmrtstruct2nii, list_rt_structs
 
 class Dataset:
     """
-    From dicom to dataset class. Convert CT and RTs files into PNG, readable by deep learning frameworks.
+    From dicom to dataset class. Convert CT and RTSTRUCT into nii, readable by deep learning frameworks.
+
+    All subfolders representing subject must contain the CT and the RTSTRUCT associated.
+
+    Example:
+        >>> from segmentation_rt.rs2mask.rs2mask import Dataset
+        >>> structures = ['Heart', 'Breast L', 'Breast R']
+        >>> dataset = Dataset('data/dicom_dataset', 'data/nii.dataset', structures)
+        >>> dataset.make()
 
     :param string path:
         Root directory.
@@ -14,7 +22,7 @@ class Dataset:
     :param string export_path:
         Export path.
 
-    :param List[string] structures:
+    :param list[string] structures:
         List of desired structure(s).
     """
 
@@ -35,7 +43,7 @@ class Dataset:
 
     def get_rs(self):
         """
-        List RT Structure file for each patient.
+        List RTSTRUCT for each patient.
 
         :rtype: list[str]
         """
@@ -49,7 +57,7 @@ class Dataset:
 
     def find_structures(self, index):
         """
-        List missing and not missing structures in a RT Structure file.
+        List missing and not missing structures in a RTSTRUCT.
 
         :param index: index of the patient.
         :type index: int
@@ -63,12 +71,12 @@ class Dataset:
         missing = ref_structures[~maks]
 
         if len(missing):
-            print(f"WARNING ! Some structures are missing :  {missing}\n")
+            print(f"WARNING ! Some structures are missing:  {missing}\n")
 
         return missing, not_missing
 
     def make(self):
-        """Create structures for each structure for all patients."""
+        """Create structures in nii format for each subject."""
         print(f"Structure(s) to export: {self.structures}")
         print(f"Patient(s) identification : {self.patients}")
 

@@ -9,7 +9,7 @@ install:
 # command to run tests
 script:
   - python --version
-  - python tests.py # from https://github.com/bhargavvader/pycobra/
+  - python tests.py
   - coverage
 
 after_success:

@@ -35,7 +35,7 @@ def format_log(epoch, iteration, errors, t, prefix=True):
     :param prefix: if prefix.
     :type prefix: bool
     :return: message.
-    :rtype: str.
+    :rtype: str
     """
     message = '(epoch: %d, iteration: %d, time: %.3f) ' % (epoch, iteration, t)
     if not prefix:
@@ -61,15 +61,21 @@ def save_image(image, path, width=10, bitdepth=8, start=None, end=None, added_sl
     """
     Save image in png format.
 
-    :param image: 3D npy array
+    :param image: 3D npy array.
+    :type image: :class:`np.ndarray`
     :param bitdepth: encoding.
-    :param path: output folder (str)
-    :param width : number of kept slices before the first and after the last non empty slices
-    :param added_slices_step : the script saves slices from the first slice to the first non empty slices
-     with this step (same at the end). if this added_slices_step ==0 , no slices are saved.
-    :param start: first slice (default 0)
-    :param end: last slice (default -1)
-
+    :type bitdepth: int
+    :param path: output folder.
+    :type path: str
+    :param width: number of kept slices before the first and after the last non empty slices.
+    :type width: int
+    :param added_slices_step: the script saves slices from the first slice to the first non empty slices with this step
+        (same at the end). if this added_slices_step ==0 , no slices are saved.
+    :type added_slices_step: int
+    :param start: first slice (default 0).
+    :type start: int
+    :param end: last slice (default -1).
+    :type end: int
     """
     if start and end:
         slicer = range(start, end)
@@ -104,7 +110,7 @@ def save_image(image, path, width=10, bitdepth=8, start=None, end=None, added_sl
 
 def get_subjects(path, structures, transform):
     """
-    Browse the path folder to build a dataset. Folder must contains Subjects with the CT and masks.
+    Browse the path folder to build a dataset. Folder must contains the subjects with the CT and masks.
 
     :param path: root folder.
     :type path: str

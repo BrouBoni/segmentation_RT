@@ -1,21 +1,9 @@
-segmentation\_rt.dl.dataloader package
+dataloader
 ======================================
 
-Submodules
-----------
-
-segmentation\_rt.dl.dataloader.dataloader module
-------------------------------------------------
+.. currentmodule:: segmentation_rt.dl.dataloader.dataloader
 
 .. automodule:: segmentation_rt.dl.dataloader.dataloader
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Module contents
----------------
-
-.. automodule:: segmentation_rt.dl.dataloader
    :members:
    :undoc-members:
    :show-inheritance:

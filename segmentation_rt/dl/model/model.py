@@ -16,7 +16,7 @@ from segmentation_rt.util.util import print_log, format_log
 
 class Model(object):
     """
-    Initialize chosen model with parameters.
+    Initialize a chosen model with parameters.
     This class allows the training of the networks and afterward for testing.
 
     Only resnet available, more coming soon.

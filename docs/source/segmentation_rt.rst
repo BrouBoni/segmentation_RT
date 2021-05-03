@@ -1,4 +1,4 @@
-segmentation\_rt package
+segmentation\_rt
 ========================
 
 Subpackages
