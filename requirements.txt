@@ -10,3 +10,4 @@ torch==1.7.1
 numpy==1.19.2
 Pillow==8.1.2
 pypng==0.0.20
+furo

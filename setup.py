@@ -27,7 +27,7 @@ setup(
                       'matplotlib==3.3.4',
                       'natsort==7.1.1',
                       'dcmrtstruct2nii==1.0.19',
-                      'scipy==1.6.0',
+                      'scipy>=1.6.0',
                       'torchio==0.18.29',
                       'nibabel==3.2.1',
                       'pydicom==2.1.2',
