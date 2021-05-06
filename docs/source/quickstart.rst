@@ -10,6 +10,13 @@ Hello, World!
 
 This example shows the basic usage of segmentation_RT::
 
+    #import
+    import os
+    from segmentation_rt.dl.dataloader.dataloader import DatasetPatch, DatasetSingle
+    from segmentation_rt.dl.model.model import Model
+    from segmentation_rt.mask2rs.rtstruct import RTStruct
+    from segmentation_rt.rs2mask.rs2mask import Dataset
+
     # dataset
     structures = ["Heart", "Breast L", "Breast R"]
     dataset = Dataset('data/data', 'data/DIBH_dataset', structures)

@@ -1,4 +1,4 @@
-scikit_image==0.18.1
+scikit-image==0.18.1
 matplotlib==3.3.4
 natsort==7.1.1
 dcmrtstruct2nii==1.0.19
@@ -8,6 +8,6 @@ nibabel==3.2.1
 pydicom==2.1.2
 torch==1.7.1
 numpy==1.19.2
-Pillow==8.1.2
 pypng==0.0.20
+tensorboard==2.4.1
 furo
