@@ -75,7 +75,7 @@ class DatasetPatch:
         """
 
     def __init__(self, root, structures, ratio=0.9, patch_size=(384, 384, 6),
-                 batch_size=1, num_worker=2, samples_per_volume=40, max_length=400):
+                 batch_size=1, num_worker=2, samples_per_volume=20, max_length=300):
 
         self.root = root
         self.structures = structures
@@ -93,7 +93,8 @@ class DatasetPatch:
         self.training_subjects, self.validation_subjects = random_split(self.subjects, ratio)
         self.patches_training_set, self.patches_validation_set = queuing(self.training_subjects,
                                                                          self.validation_subjects,
-                                                                         patch_size, samples_per_volume,
+                                                                         patch_size, len(structures)+1,
+                                                                         samples_per_volume,
                                                                          max_length, num_worker)
 
     def get_loaders(self):
@@ -136,13 +137,15 @@ def random_split(subjects, ratio=0.8):
     return torch.utils.data.random_split(subjects, num_split_subjects)
 
 
-def queuing(training_subjects, validation_subjects, patch_size, samples_per_volume=10,
+def queuing(training_subjects, validation_subjects, patch_size, n, samples_per_volume=10,
             max_length=200, num_workers=2):
     """
     Queue used for stochastic patch-based training.
 
     See :class:`tio.data.Queue`.
 
+    :param n: # structures,
+    :type n: int
     :param training_subjects: train dataset.
     :type training_subjects: :class:`tio.SubjectsDataset`
     :param validation_subjects: validation dataset.
@@ -158,7 +161,12 @@ def queuing(training_subjects, validation_subjects, patch_size, samples_per_volu
     :return: training and validation queue.
     :rtype: (:class:`tio.data.Queue`, :class:`tio.data.Queue`)
     """
-    sampler = tio.data.WeightedSampler(patch_size, 'label_map')
+    probabilities = dict(zip([i for i in range(n)], [1 for _ in range(n)]))
+    sampler = tio.data.LabelSampler(
+        patch_size=patch_size,
+        label_name='label_map',
+        label_probabilities=probabilities,
+    )
 
     patches_training_set = tio.Queue(
         subjects_dataset=training_subjects,
