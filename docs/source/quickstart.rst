@@ -12,10 +12,10 @@ This example shows the basic usage of segmentation_RT::
 
     #import
     import os
-    from segmentation_rt.dl.dataloader.dataloader import DatasetPatch, DatasetSingle
-    from segmentation_rt.dl.model.model import Model
-    from segmentation_rt.mask2rs.rtstruct import RTStruct
-    from segmentation_rt.rs2mask.rs2mask import Dataset
+    from segmentation_rt.dl.dataloader import DatasetPatch, DatasetSingle
+    from segmentation_rt.dl.model import Model
+    from segmentation_rt.mask2rs import RTStruct
+    from segmentation_rt.rs2mask import Dataset
 
     # dataset
     structures = ["Heart", "Breast L", "Breast R"]
@@ -36,7 +36,7 @@ This example shows the basic usage of segmentation_RT::
     # testing
     expr_dir = os.path.join(checkpoints_dir, name)
     model = Model(expr_dir, structures,  n_blocks=9)
-    root_prediction = 'prediction/'
+    root_prediction = 'prediction/ct/'
     pred_data_loader = DatasetSingle(root_prediction, structures)
     fake_segmentation = model.test(pred_data_loader, export_path='prediction/143012/', save=True)
 

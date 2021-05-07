@@ -1,3 +1,5 @@
+""" Implementation of useful function."""
+
 import os
 
 import numpy as np

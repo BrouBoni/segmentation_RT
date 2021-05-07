@@ -1,3 +1,7 @@
+""" Implementation of two dataloader, one for the training and the other one for inference.
+Both are based on 3D patch samplers allowing a less greedy memory consumption.
+"""
+
 import os
 
 import torch
@@ -9,13 +13,13 @@ from segmentation_rt.util.util import get_subjects
 
 class DatasetSingle:
     """
-    Initialize a dataset suited inference.
+    Initialize a dataset suited inference extracting patches across a whole volume.
 
             :param str root:
-                root folder.
+                root folder containing CT dicom files or a path to a nii file.
 
             :param list[str] structures:
-                list of structures.
+                list of structures to label the output.
 
             :param (int, int, int) patch_size:
                 Tuple of integers (width, height, depth).
@@ -30,7 +34,7 @@ class DatasetSingle:
             tio.ToCanonical(),
             tio.RescaleIntensity(1, (1, 99.0))
         ])
-        self.subject = tio.Subject(ct=tio.ScalarImage(os.path.join(root, 'ct.nii')))
+        self.subject = tio.Subject(ct=tio.ScalarImage(root))
 
         self.patch_size = patch_size
         self.patch_overlap = 4
@@ -47,7 +51,7 @@ class DatasetSingle:
 
 class DatasetPatch:
     """
-    Initialize a dataset suited for patch-based training.
+    Initialize a dataset suited for patch-based training. Patches are sampled with labeled voxels at their center.
 
         :param str root:
             root folder.
@@ -102,7 +106,7 @@ class DatasetPatch:
         Return training and validation :class:`data.DataLoader`.
 
         :return: training and validation DataLoader.
-        :rtype: (:class:`data.DataLoader`,:class:`data.DataLoader`)
+        :rtype: (:class:`data.DataLoader`, :class:`data.DataLoader`)
         """
         training_loader_patches = torch.utils.data.DataLoader(
             self.patches_training_set, batch_size=self.batch_size,

@@ -1,3 +1,7 @@
+""" Implementation of :py:class:`Dataset` object. A folder containing a set of subjects with CT and RS in dicom format
+is converted into nii format. A new folder is created keeping the same organization.
+"""
+
 import os
 
 import numpy as np
@@ -8,12 +12,12 @@ class Dataset:
     """
     From dicom to dataset class. Convert CT and RTSTRUCT into nii, readable by deep learning frameworks.
 
-    All subfolders representing subject must contain the CT and the RTSTRUCT associated.
+    All subfolders representing subject must contain the CT and the RS associated.
 
     Example:
-        >>> from segmentation_rt.rs2mask.rs2mask import Dataset
+        >>> from segmentation_rt.rs2mask import Dataset
         >>> structures = ['Heart', 'Breast L', 'Breast R']
-        >>> dataset = Dataset('data/dicom_dataset', 'data/nii.dataset', structures)
+        >>> dataset = Dataset('data/dicom_dataset', 'data/nii_dataset', structures)
         >>> dataset.make()
 
     :param string path:
@@ -24,13 +28,17 @@ class Dataset:
 
     :param list[string] structures:
         List of desired structure(s).
+
+    :param bool force:
+        Force export even if one structure is missing.
     """
 
-    def __init__(self, path, export_path, structures):
+    def __init__(self, path, export_path, structures, force=True):
         self.path = path
         self.export_path = export_path
         self.structures = structures
         self.dataset_name = os.path.basename(export_path)
+        self.force = force
 
         self.root_path = os.path.dirname(self.path)
         self.patients = [folder for folder in os.listdir(self.path) if
@@ -76,7 +84,7 @@ class Dataset:
         return missing, not_missing
 
     def make(self):
-        """Create structures in nii format for each subject."""
+        """Create structures and convert the CT in nii format for each subject."""
         print(f"Structure(s) to export: {self.structures}")
         print(f"Patient(s) identification : {self.patients}")
 
@@ -85,14 +93,19 @@ class Dataset:
             print(f"Exporting {index + 1} ({patient_id}) on {len(self.patients)}")
 
             nii_output = os.path.join(self.export_path, patient_id)
-            _, not_missing = self.find_structures(index)
-            dcmrtstruct2nii(self.rs_paths[index], path_patient, nii_output, not_missing, False, mask_foreground_value=1)
+            missing, not_missing = self.find_structures(index)
+            if len(missing) == 0 or self.force:
 
-            nii_maks = [nii_mask for nii_mask in os.listdir(nii_output) if nii_mask.startswith('mask')]
-            for nii in nii_maks:
-                name = os.path.splitext(nii)[0].split("_")[1].replace("-", " ")
-                os.rename(os.path.join(nii_output, nii), os.path.join(nii_output, name+'.nii'))
+                dcmrtstruct2nii(self.rs_paths[index], path_patient, nii_output, not_missing, False,
+                                mask_foreground_value=1)
 
-            os.rename(os.path.join(nii_output, "image.nii"), os.path.join(nii_output, "ct.nii"))
+                nii_maks = [nii_mask for nii_mask in os.listdir(nii_output) if nii_mask.startswith('mask')]
+                for nii in nii_maks:
+                    name = os.path.splitext(nii)[0].split("_")[1].replace("-", " ")
+                    os.rename(os.path.join(nii_output, nii), os.path.join(nii_output, name + '.nii'))
+
+                os.rename(os.path.join(nii_output, "image.nii"), os.path.join(nii_output, "ct.nii"))
+            else:
+                print(f"Skip {patient_id} because of missing structure(s)")
 
         print("Export done")

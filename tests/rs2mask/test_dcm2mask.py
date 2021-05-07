@@ -31,6 +31,11 @@ class TestDataset(TestCase):
         self.assertEqual(len(missing), 1)
         self.assertEqual(['External', 'max'], list(not_missing))
 
-    def test_make(self):
+    def test_make_force(self):
         self.dataset.make()
         self.assertTrue(os.path.exists(os.path.join(TEST_EXPORT, "cheese_dcm_1", "ct.nii")))
+
+    def test_make_not_force(self):
+        self.dataset.force = False
+        self.dataset.make()
+        self.assertFalse(os.path.exists(os.path.join(TEST_EXPORT, "cheese_dcm_1", "ct.nii")))

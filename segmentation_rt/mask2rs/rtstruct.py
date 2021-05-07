@@ -21,6 +21,15 @@ class RTStruct:
     """
     Class that builds a RT structure :class:`pydicom.dataset.Dataset`.
 
+    Example:
+        >>> from segmentation_rt.mask2rs import RTStruct
+        >>> structures = ['Heart', 'Breast L', 'Breast R']
+        >>> ct_path = os.path.join('prediction/143012/ct/')
+        >>> mask = os.path.join('prediction/143012/fake_segmentation.nii')
+        >>> struct = RTStruct(ct_path, mask, structures)
+        >>> struct.create()
+        >>> struct.save()
+
     :param string ct_path:
         Path to the CT folder.
 
