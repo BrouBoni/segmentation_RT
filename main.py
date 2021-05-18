@@ -23,7 +23,7 @@ if __name__ == '__main__':
     model = Model(expr_dir, structures, n_blocks=9, niter=150, niter_decay=50)
     model.train(training_loader_patches, validation_loader_patches)
 
-    # testing
+    # inference
     expr_dir = os.path.join(checkpoints_dir, name)
     model = Model(expr_dir, structures,  n_blocks=9)
     root_prediction = 'prediction/ct/'

@@ -22,7 +22,7 @@ def print_log(out_f, message):
     print(message)
 
 
-def format_log(epoch, iteration, errors, t, prefix=True):
+def format_log(epoch, iteration, errors, t):
     """
     Generic format for print/log.
 
@@ -34,14 +34,10 @@ def format_log(epoch, iteration, errors, t, prefix=True):
     :type errors: dict[float]
     :param t: time.
     :type t: float
-    :param prefix: if prefix.
-    :type prefix: bool
     :return: message.
     :rtype: str
     """
     message = '(epoch: %d, iteration: %d, time: %.3f) ' % (epoch, iteration, t)
-    if not prefix:
-        message = ' ' * len(message)
     for k, v in errors.items():
         message += '%s: %.3f ' % (k, v)
     return message

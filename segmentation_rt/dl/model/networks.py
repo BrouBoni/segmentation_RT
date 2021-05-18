@@ -152,7 +152,7 @@ class ResnetGenerator(nn.Module):
         self.model = nn.Sequential(*model)
 
     def forward(self, x):
-        """Standard forward"""
+        """Standard forward."""
         return self.model(x)
 
     def __str__(self):

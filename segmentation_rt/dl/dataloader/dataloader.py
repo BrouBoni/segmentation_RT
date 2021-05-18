@@ -1,8 +1,8 @@
-""" Implementation of two dataloader, one for the training and the other one for inference.
+"""
+Implementation of two dataloader, one for the training and the other one for inference.
+
 Both are based on 3D patch samplers allowing a less greedy memory consumption.
 """
-
-import os
 
 import torch
 import torch.utils.data

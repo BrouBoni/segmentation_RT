@@ -17,9 +17,8 @@ from segmentation_rt.util.util import print_log, format_log
 class Model(object):
     """
     Initialize a chosen model with parameters.
-    This class allows the training of the networks and afterward for testing.
 
-    Only resnet available, more coming soon.
+    This class allows the training of the networks and afterward for testing.Only resnet available, more coming soon.
 
     :param expr_dir: output folder.
     :type expr_dir: str
