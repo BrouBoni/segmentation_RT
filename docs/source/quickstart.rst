@@ -3,7 +3,7 @@
 Installation
 ============
 
-…
+Pypi soon, clone for the moment and install the requirements.
 
 Hello, World!
 =============

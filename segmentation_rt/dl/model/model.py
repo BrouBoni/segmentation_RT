@@ -365,7 +365,7 @@ class Model(object):
             affine = dataset.transform(dataset.subject['ct']).affine
             foreground = dataset.aggregator.get_output_tensor()
             fake_segmentation_mask = foreground.argmax(dim=0, keepdim=True).type(torch.int8)
-            prediction = tio.ScalarImage(tensor=fake_segmentation_mask, affine=affine)
+            prediction = tio.LabelMap(tensor=fake_segmentation_mask, affine=affine)
             print(f"{time.time() - start} sec. for evaluation")
             if save:
                 prediction.save(os.path.join(prediction_path, 'fake_segmentation.nii'))
