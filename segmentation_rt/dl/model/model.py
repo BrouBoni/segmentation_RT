@@ -65,7 +65,8 @@ class Model(object):
     def __init__(self, expr_dir, structures, seed=None, batch_size=None,
                  epoch_count=1, niter=150, niter_decay=50, beta1=0.5, lr=0.0002,
                  ngf=64, n_blocks=9, input_nc=1, use_dropout=False, norm='batch', max_grad_norm=500.,
-                 monitor_grad_norm=True, save_epoch_freq=2, print_freq=60, display_epoch_freq=1, testing=False):
+                 monitor_grad_norm=True, save_epoch_freq=2, print_freq=60, display_epoch_freq=1, testing=False,
+                 resume=False):
 
         self.expr_dir = expr_dir
         self.structures = structures
@@ -121,6 +122,9 @@ class Model(object):
                 num_params += networks.print_network(self.netG, nets_f)
                 nets_f.write('# parameters: %d\n' % num_params)
                 nets_f.flush()
+
+        if resume:
+            self.load(os.path.join(self.expr_dir, "latest"), True)
 
     def train(self, train_dataset, test_dataset=None):
         """
@@ -179,15 +183,6 @@ class Model(object):
                 print_log(out_f, 'saving the model at the end of epoch %d, iterations %d' %
                           (epoch, total_steps))
                 self.save('latest')
-
-                if test_dataset:
-                    train_dice = self.eval_dice(train_dataset)
-                    test_dice = self.eval_dice(test_dataset)
-                    tensorbard_writer.add_scalars('Dice score', {'Train': train_dice,
-                                                                 'Test': test_dice}, epoch)
-
-                    print_log(out_f, 'Train Dice: %.4f, Test Dice: %.4f. \t' %
-                              (train_dice, test_dice))
 
             print_log(out_f, 'End of epoch %d / %d \t Time Taken: %d sec' %
                       (epoch, self.niter + self.niter_decay, time.time() - epoch_start_time))
@@ -309,26 +304,6 @@ class Model(object):
         for k, v in sorted(self.__dict__.items()):
             print_log(options_file, '%s: %s' % (str(k), str(v)))
         print_log(options_file, '-------------- End ----------------')
-
-    def eval_dice(self, dataset):
-        """
-        Evaluation metric using MAE.
-
-        :param dataset: training dataset.
-        :type dataset: :class:`DataLoader`
-        :return: MAE of the dataset.
-        :rtype: float
-        """
-        dice = []
-
-        with torch.no_grad():
-            for batch in dataset:
-                ct = batch['ct'][tio.DATA].to(self.device)
-                segmentation = batch['label_map'][tio.DATA].to(self.device)
-
-                fake_segmentation = self.netG.forward(ct)
-                dice.append(networks.dice_score(fake_segmentation, segmentation).data.item())
-        return np.mean(dice)
 
     def test(self, dataset, export_path=None, checkpoint=None, save=False):
         """
